@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "dfa_kernel.h"
 
 
@@ -19,8 +20,9 @@ void fit(int L, const double * __restrict__ x, const double * __restrict__ y,
         sumy += y[i];
         sumy2 += y[i] * y[i];
     }
-        
+    
     double denom = (L * sumx2 - sumx * sumx);
+
     if(denom == 0.0)
     {
         *ang_coeff = 0.0;
@@ -48,6 +50,7 @@ void DFAKernel(const double * __restrict__ y, const double * __restrict__ t,
         //f[tx] = 0.0;
         int startLim = tx * currWinSize;
         double m = 0.0, q = 0.0;
+        
         fit(currWinSize, t + startLim, y + startLim, &m, &q);
 
         for(int j = 0; j < currWinSize; j++)
@@ -60,9 +63,12 @@ void DFAKernel(const double * __restrict__ y, const double * __restrict__ t,
     }
 }
 
-void cudaDFA(const double * y, const double * t, int currWinSize,
-             int Ns, double * f)
+void cudaDFA(double *y, double *t, int currWinSize,
+             int Ns, double *f)
 {
-    DFAKernel<<<512, 512>>>(y, t, currWinSize, Ns, f);
+    int threadsPerBlock = 512;
+    int blocksPerGrid = (Ns + threadsPerBlock - 1) / threadsPerBlock;
+    DFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, currWinSize, Ns, f);
+    cudaDeviceSynchronize();
 }
 

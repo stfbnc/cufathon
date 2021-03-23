@@ -1,21 +1,19 @@
 #ifndef DFA_H
 #define DFA_H
 
-#include <iostream>
-#include <vector>
 #include "../cuda/dfa_kernel.h"
+#include "../cuda/utils_kernels.h"
 
 
 class DFA
 {
 public:
-    explicit DFA(std::vector<double> ts);
+    explicit DFA(double *y, int yLen);
     ~DFA();
-    void computeFlucVec();
+    void computeFlucVec(int *winSizes, int nWins, double *F, bool revSeg=false);
 private:
-    void fromStdVectorToCArray(std::vector<double> vec);
-
     double *y = nullptr;
+    double *t = nullptr;
     int yLen = 0;
 };
 

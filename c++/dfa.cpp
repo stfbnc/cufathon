@@ -1,23 +1,44 @@
 #include "dfa.h"
+#include <iostream>
 
 
-DFA::DFA(std::vector<double> ts)
+DFA::DFA(double *y, int yLen)
 {
-    this->yLen = ts.size();
-    this->y = new double [this->yLen];
-    this->fromStdVectorToCArray(ts);
+    this->yLen = yLen;
+    cudaMalloc((void**)&(this->y), this->yLen * sizeof(double));
+    cudaMemcpy(this->y, y, this->yLen * sizeof(double), cudaMemcpyHostToDevice);
+
+    cudaMalloc((void**)&(this->t), this->yLen * sizeof(double));
+    linRange(this->t, this->yLen, 1);
 }
 
 DFA::~DFA()
 {
-    delete [] this->y;
+    cudaFree(this->y);
+    cudaFree(this->t);
 }
 
-void DFA::computeFlucVec(){}
-
-void DFA::fromStdVectorToCArray(std::vector<double> vec)
+void DFA::computeFlucVec(int *winSizes, int nWins, double *F, bool revSeg)
 {
-    for(int i = 0; i < this->yLen; i++)
-        this->y[i] = vec.at(i);
+    for(int nWin = 0; nWin < nWins; nWin++)
+    {
+        int currWinSize = winSizes[nWin];
+        int Ns = this->yLen / currWinSize;
+
+        double *f = nullptr;
+        cudaMalloc((void**)&f, Ns * sizeof(double));
+
+        cudaDFA(this->y, this->t, currWinSize, Ns, f);
+
+        double *fcpu = new double [Ns];
+        cudaMemcpy(fcpu, f, Ns * sizeof(double), cudaMemcpyDeviceToHost);
+        double sum = 0.0;
+        for(int i = 0; i < Ns; i++)
+            sum += fcpu[i];
+        delete [] fcpu;
+        cudaFree(f);
+
+        fprintf(stderr, "Sum %d: %lf\n", nWin, sum);
+    }
 }
 
