@@ -1,3 +1,3 @@
 # cufathon
 
-`fathon`, in CUDA.
+`fathon`, in CUDA. (Still work in progress)

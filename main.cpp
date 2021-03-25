@@ -34,7 +34,7 @@ int main()
     double *in_cs = new double [N];
 
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen(42);  //gen(rd());
     std::normal_distribution<> gdist(0, 1);
     for(int i = 0; i < N; i++)
         in[i] = gdist(gen);
