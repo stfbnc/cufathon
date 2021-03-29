@@ -20,25 +20,35 @@ DFA::~DFA()
 
 void DFA::computeFlucVec(int *winSizes, int nWins, double *F, bool revSeg)
 {
+    //for(int nWin = 0; nWin < nWins; nWin++)
+    //{
+    //    int currWinSize = winSizes[nWin];
+    //    int Ns = this->yLen / currWinSize;
+
+        double *flucVec = nullptr;
+        //cudaMalloc((void**)&f, Ns * sizeof(double));
+        cudaMalloc((void**)&flucVec, nWins * sizeof(double));
+        int *winSizesGpu = nullptr;
+        cudaMalloc((void**)&winSizesGpu, nWins * sizeof(int));
+        cudaMemcpy(winSizesGpu, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+
+        //cudaDFA(this->y, this->t, currWinSize, Ns, f);
+        cudaDFA(this->y, this->t, this->yLen, winSizesGpu, nWins, flucVec);
+
+        cudaMemcpy(F, flucVec, nWins * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaFree(flucVec);
+        cudaFree(winSizesGpu);
+        //double *fcpu = new double [Ns];
+        //cudaMemcpy(fcpu, f, Ns * sizeof(double), cudaMemcpyDeviceToHost);
+        //double sum = 0.0;
+        //for(int i = 0; i < Ns; i++)
+        //    sum += fcpu[i];
+        //delete [] fcpu;
+        //cudaFree(f);
+
     for(int nWin = 0; nWin < nWins; nWin++)
     {
-        int currWinSize = winSizes[nWin];
-        int Ns = this->yLen / currWinSize;
-
-        double *f = nullptr;
-        cudaMalloc((void**)&f, Ns * sizeof(double));
-
-        cudaDFA(this->y, this->t, currWinSize, Ns, f);
-
-        double *fcpu = new double [Ns];
-        cudaMemcpy(fcpu, f, Ns * sizeof(double), cudaMemcpyDeviceToHost);
-        double sum = 0.0;
-        for(int i = 0; i < Ns; i++)
-            sum += fcpu[i];
-        delete [] fcpu;
-        cudaFree(f);
-
-        fprintf(stderr, "Sum %d: %lf\n", nWin, sum);
+        fprintf(stderr, "F[%d]: %lf\n", nWin, F[nWin]);
     }
 }
 

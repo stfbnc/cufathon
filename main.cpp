@@ -1,10 +1,11 @@
 #include <time.h>
 #include <iostream>
+#include <cstdlib>
 #include <random>
 #include "c++/dfa.h"
 
 
-int main()
+int main(int argc, char **argv)
 {
     //cudaEvent_t start, stop;
     //float elapsedTime;
@@ -29,7 +30,7 @@ int main()
     //uint64_t delta_us = (end_cpu.tv_sec - start_cpu.tv_sec) * 1000000 + (end_cpu.tv_nsec - start_cpu.tv_nsec) / 1000;
     //fprintf(stderr, "CPU Time : %lu ms\n", delta_us / 1000);
 
-    int N = 1000;
+    int N = atoi(argv[1]);
     double *in = new double [N];
     double *in_cs = new double [N];
 
@@ -42,12 +43,14 @@ int main()
     for(int i = 1; i < N; i++)
         in_cs[i] = in_cs[i - 1] + in[i];
 
-    int nWins = 3;
-    int wins[] = {10, 20, 30};
-
+    int nWins = 200;
+    int *wins = new int [nWins];
     double *fVec = new double [nWins];
     for(int i = 0; i < nWins; i++)
+    {
+       wins[i] = i + 10;
        fVec[i] = 0.0;
+    }
 
     DFA dfa(in_cs, N);
     dfa.computeFlucVec(wins, nWins, fVec);
@@ -57,6 +60,7 @@ int main()
 
     delete [] in;
     delete [] in_cs;
+    delete [] wins;
     delete [] fVec;    
 
     return 0;

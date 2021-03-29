@@ -1,8 +1,8 @@
 #ifndef DFA_H
 #define DFA_H
 
-#include "../cuda/dfa_kernel.h"
-#include "../cuda/utils_kernels.h"
+#include "../cuda/dfa_kernel.cuh"
+#include "../cuda/utils_kernels.cuh"
 
 
 class DFA

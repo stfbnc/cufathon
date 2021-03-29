@@ -37,7 +37,7 @@ OBJ_TOT=$(OBJ_MAIN) $(OBJ_CPU) $(OBJ_GPU)
 OBJS=$(addprefix $(OBJ_DIR), $(OBJ_TOT))
 
 DEPS_CPU=$(wildcard c++/*.h)
-DEPS_GPU=$(wildcard cuda/*.h)
+DEPS_GPU=$(wildcard cuda/*.cuh)
 
 all: release
 

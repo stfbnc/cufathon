@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "utils_kernels.h"
+#include "utils_kernels.cuh"
 
 
 __global__
