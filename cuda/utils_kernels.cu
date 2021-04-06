@@ -15,8 +15,9 @@ void linRangeKernel(double * __restrict__ vec, int N, int start)
 
 void linRange(double *vec, int N, int start)
 {
-    int threadsPerBlock = 512;
-    int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
+    int nThreads = 512;
+    dim3 threadsPerBlock(nThreads);
+    dim3 blocksPerGrid((N + nThreads - 1) / nThreads);
     linRangeKernel<<<blocksPerGrid, threadsPerBlock>>>(vec, N, start);
     cudaDeviceSynchronize();
 }

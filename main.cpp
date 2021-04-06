@@ -3,32 +3,13 @@
 #include <cstdlib>
 #include <random>
 #include "c++/dfa.h"
+#include "c++/utils.h"
 
 
 int main(int argc, char **argv)
 {
-    //cudaEvent_t start, stop;
-    //float elapsedTime;
-
-    //cudaEventCreate(&start);
-    //cudaEventRecord(start, 0);
-
-    //patch_preprocessing(toNorm, norm, W, H, B, G, R);
-    //cudaDeviceSynchronize();
-
-    //cudaEventCreate(&stop);
-    //cudaEventRecord(stop, 0);
-    //cudaEventSynchronize(stop);
-
-    //cudaEventElapsedTime(&elapsedTime, start, stop);
-    //fprintf(stderr, "GPU Time : %f ms\n", elapsedTime);
-
-    //struct timespec start_cpu, end_cpu;
-    //clock_gettime(CLOCK_MONOTONIC_RAW, &start_cpu);
-    //clock_gettime(CLOCK_MONOTONIC_RAW, &end_cpu);
-
-    //uint64_t delta_us = (end_cpu.tv_sec - start_cpu.tv_sec) * 1000000 + (end_cpu.tv_nsec - start_cpu.tv_nsec) / 1000;
-    //fprintf(stderr, "CPU Time : %lu ms\n", delta_us / 1000);
+    int gpu = 0;
+    gpuUtils::getGpuInfo(gpu);
 
     int N = atoi(argv[1]);
     double *in = new double [N];
@@ -43,20 +24,53 @@ int main(int argc, char **argv)
     for(int i = 1; i < N; i++)
         in_cs[i] = in_cs[i - 1] + in[i];
 
-    int nWins = 200;
+    int minWin = 10;
+    int nWins = N / 4 - minWin;
     int *wins = new int [nWins];
     double *fVec = new double [nWins];
     for(int i = 0; i < nWins; i++)
     {
-       wins[i] = i + 10;
+       wins[i] = i + minWin;
        fVec[i] = 0.0;
     }
 
-    DFA dfa(in_cs, N);
+    fprintf(stderr, "Input vector length: %d\n", N);
+    fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
+
+/*    DFA dfa(in_cs, N);
+
+    cudaEvent_t start_o, stop_o, start_i, stop_i;
+    float elapsedTime_o, elapsedTime_i;
+
+    cudaEventCreate(&start_o);
+    cudaEventRecord(start_o, 0);
+
     dfa.computeFlucVec(wins, nWins, fVec);
 
-    //for(int i = 0; i < nWins; i++)
-    //   std::cout << in_cs[i] << std::endl;
+    cudaEventCreate(&stop_o);
+    cudaEventRecord(stop_o, 0);
+    cudaEventSynchronize(stop_o);
+
+    cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
+    fprintf(stderr, "GPU Time (outer) : %f ms\n", elapsedTime_o);
+
+    //for(int i = 0; i < 3; i++)
+    //    std::cout << fVec[i] << std::endl;
+
+    cudaEventCreate(&start_i);
+    cudaEventRecord(start_i, 0);
+
+    dfa.computeFlucVecInner(wins, nWins, fVec);
+
+    cudaEventCreate(&stop_i);
+    cudaEventRecord(stop_i, 0);
+    cudaEventSynchronize(stop_i);
+
+    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
+    fprintf(stderr, "GPU Time (inner) : %f ms\n", elapsedTime_i);
+*/
+    //for(int i = 0; i < 3; i++)
+    //    std::cout << fVec[i] << std::endl;
 
     delete [] in;
     delete [] in_cs;

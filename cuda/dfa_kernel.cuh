@@ -7,6 +7,6 @@
 
 
 void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec);
-void cudaDFAInner(double *y, double *t, int currWinSize, int Ns, double *f);
+void cudaDFAInner(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec);
 
 #endif

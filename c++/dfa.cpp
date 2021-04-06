@@ -2,51 +2,117 @@
 #include <iostream>
 
 
-DFA::DFA(double *y, int yLen)
+DFA::DFA(double *h_y, int yLen)
 {
-    this->yLen = yLen;
-    cudaMalloc((void**)&(this->y), this->yLen * sizeof(double));
-    cudaMemcpy(this->y, y, this->yLen * sizeof(double), cudaMemcpyHostToDevice);
+    // reset internal state
+    cudaErr = cudaGetLastError();
 
-    cudaMalloc((void**)&(this->t), this->yLen * sizeof(double));
-    linRange(this->t, this->yLen, 1);
+    // assign local variables and reserve memory on device
+    len = yLen;
+  
+    cudaErr = cudaMalloc(&d_y, len * sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaMalloc(&d_t, len * sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    // fill device arrays
+    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(double), cudaMemcpyHostToDevice);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    linRange(d_t, len, 1);
+    cudaErr = cudaGetLastError();
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
 DFA::~DFA()
 {
-    cudaFree(this->y);
-    cudaFree(this->t);
+    cudaErr = cudaFree(d_y);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    
+    cudaErr = cudaFree(d_t);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
 void DFA::computeFlucVec(int *winSizes, int nWins, double *F, bool revSeg)
 {
-    //for(int nWin = 0; nWin < nWins; nWin++)
-    //{
-    //    int currWinSize = winSizes[nWin];
-    //    int Ns = this->yLen / currWinSize;
+    double *flucVec = nullptr;
+    cudaErr = cudaMalloc(&flucVec, nWins * sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-        double *flucVec = nullptr;
-        //cudaMalloc((void**)&f, Ns * sizeof(double));
-        cudaMalloc((void**)&flucVec, nWins * sizeof(double));
-        int *winSizesGpu = nullptr;
-        cudaMalloc((void**)&winSizesGpu, nWins * sizeof(int));
-        cudaMemcpy(winSizesGpu, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+    int *winSizesGpu = nullptr;
+    cudaErr = cudaMalloc(&winSizesGpu, nWins * sizeof(int));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-        //cudaDFA(this->y, this->t, currWinSize, Ns, f);
-        cudaDFA(this->y, this->t, this->yLen, winSizesGpu, nWins, flucVec);
+    cudaErr = cudaMemcpy(winSizesGpu, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-        cudaMemcpy(F, flucVec, nWins * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaFree(flucVec);
-        cudaFree(winSizesGpu);
-        //double *fcpu = new double [Ns];
-        //cudaMemcpy(fcpu, f, Ns * sizeof(double), cudaMemcpyDeviceToHost);
-        //double sum = 0.0;
-        //for(int i = 0; i < Ns; i++)
-        //    sum += fcpu[i];
-        //delete [] fcpu;
-        //cudaFree(f);
+    cudaDFA(d_y, d_t, len, winSizesGpu, nWins, flucVec);
+    cudaErr = cudaGetLastError();
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    for(int nWin = 0; nWin < nWins; nWin++)
+    cudaErr = cudaMemcpy(F, flucVec, nWins * sizeof(double), cudaMemcpyDeviceToHost);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaFree(flucVec);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaFree(winSizesGpu);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    for(int nWin = 0; nWin < 3; nWin++)
+    {
+        fprintf(stderr, "F[%d]: %lf\n", nWin, F[nWin]);
+    }
+}
+
+void DFA::computeFlucVecInner(int *winSizes, int nWins, double *F, bool revSeg)
+{
+    double *flucVec = nullptr;
+    cudaErr = cudaMalloc(&flucVec, nWins * sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    int *winSizesGpu = nullptr;
+    cudaErr = cudaMalloc(&winSizesGpu, nWins * sizeof(int));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaMemcpy(winSizesGpu, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaDFAInner(d_y, d_t, len, winSizesGpu, nWins, flucVec);
+    cudaErr = cudaGetLastError();
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaMemcpy(F, flucVec, nWins * sizeof(double), cudaMemcpyDeviceToHost);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaFree(flucVec);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaFree(winSizesGpu);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    for(int nWin = 0; nWin < 3; nWin++)
     {
         fprintf(stderr, "F[%d]: %lf\n", nWin, F[nWin]);
     }
