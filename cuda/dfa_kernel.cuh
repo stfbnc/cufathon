@@ -6,7 +6,7 @@
 #include "utils_device.cuh"
 
 
-void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec);
-void cudaDFAInner(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec);
+void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, int nThreads);
+void cudaDFAInner(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, int nThreads);
 
 #endif

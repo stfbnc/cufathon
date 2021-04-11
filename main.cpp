@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
-/*    DFA dfa(in_cs, N);
+    DFA dfa(in_cs, N);
 
     cudaEvent_t start_o, stop_o, start_i, stop_i;
     float elapsedTime_o, elapsedTime_i;
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 
     cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
     fprintf(stderr, "GPU Time (inner) : %f ms\n", elapsedTime_i);
-*/
+
     //for(int i = 0; i < 3; i++)
     //    std::cout << fVec[i] << std::endl;
 

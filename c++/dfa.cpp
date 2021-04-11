@@ -56,7 +56,7 @@ void DFA::computeFlucVec(int *winSizes, int nWins, double *F, bool revSeg)
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaDFA(d_y, d_t, len, winSizesGpu, nWins, flucVec);
+    cudaDFA(d_y, d_t, len, winSizesGpu, nWins, flucVec, 64);
     cudaErr = cudaGetLastError();
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
@@ -73,10 +73,9 @@ void DFA::computeFlucVec(int *winSizes, int nWins, double *F, bool revSeg)
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    for(int nWin = 0; nWin < 3; nWin++)
-    {
-        fprintf(stderr, "F[%d]: %lf\n", nWin, F[nWin]);
-    }
+    fprintf(stderr, "F[0]: %lf\n", F[0]);
+    fprintf(stderr, "F[%d]: %lf\n", nWins / 2, F[nWins / 2]);
+    fprintf(stderr, "F[%d]: %lf\n", nWins - 1, F[nWins - 1]);
 }
 
 void DFA::computeFlucVecInner(int *winSizes, int nWins, double *F, bool revSeg)
@@ -95,7 +94,7 @@ void DFA::computeFlucVecInner(int *winSizes, int nWins, double *F, bool revSeg)
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaDFAInner(d_y, d_t, len, winSizesGpu, nWins, flucVec);
+    cudaDFAInner(d_y, d_t, len, winSizesGpu, nWins, flucVec, 512);
     cudaErr = cudaGetLastError();
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
@@ -112,9 +111,8 @@ void DFA::computeFlucVecInner(int *winSizes, int nWins, double *F, bool revSeg)
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    for(int nWin = 0; nWin < 3; nWin++)
-    {
-        fprintf(stderr, "F[%d]: %lf\n", nWin, F[nWin]);
-    }
+    fprintf(stderr, "F[0]: %lf\n", F[0]);
+    fprintf(stderr, "F[%d]: %lf\n", nWins / 2, F[nWins / 2]);
+    fprintf(stderr, "F[%d]: %lf\n", nWins - 1, F[nWins - 1]);
 }
 

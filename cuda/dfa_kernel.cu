@@ -32,9 +32,8 @@ void DFAKernel(const double * __restrict__ y, const double * __restrict__ t, int
     }
 }
 
-void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec)
+void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, int nThreads)
 {
-    int nThreads = 512;
     dim3 threadsPerBlock(nThreads);
     dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
     DFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, winSizes, nWins, flucVec);
@@ -48,8 +47,9 @@ void DFAKernelInner(const double * __restrict__ y, const double * __restrict__ t
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
 
-    extern __shared__ double s_y[];
-    extern __shared__ double s_t[];
+    extern __shared__ double sh[];
+    double *s_y = &sh[0];
+    double *s_t = &sh[N];
 
     if(nWin == 0)
     {
@@ -86,11 +86,10 @@ void DFAKernelInner(const double * __restrict__ y, const double * __restrict__ t
     }
 }
 
-void cudaDFAInner(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec)
+void cudaDFAInner(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, int nThreads)
 {
-    int nThreads = 512;
     dim3 threadsPerBlock(nThreads);
     dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
-    DFAKernelInner<<<blocksPerGrid, threadsPerBlock, N * sizeof(double)>>>(y, t, N, winSizes, nWins, flucVec);
+    DFAKernelInner<<<blocksPerGrid, threadsPerBlock, 2 * N * sizeof(double)>>>(y, t, N, winSizes, nWins, flucVec);
     cudaDeviceSynchronize();
 }
