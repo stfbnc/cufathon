@@ -3,7 +3,10 @@
 #include <cstdlib>
 #include <random>
 #include "c++/dfa.h"
+#include "c++/mfdfa.h"
 #include "c++/utils.h"
+
+#include "cudaProfiler.h"
 
 
 int main(int argc, char **argv)
@@ -25,19 +28,33 @@ int main(int argc, char **argv)
         in_cs[i] = in_cs[i - 1] + in[i];
 
     int minWin = 10;
+    int minq = -4;
     int nWins = N / 4 - minWin;
+    int nq = 10;
     int *wins = new int [nWins];
-    double *fVec = new double [nWins];
+    double *qs = new double [nq];
+    double *fVec = new double [nWins * nq];
     for(int i = 0; i < nWins; i++)
     {
        wins[i] = i + minWin;
+       //fVec[i] = 0.0;
+    }
+    for(int i = 0; i < nq; i++)
+    {
+       qs[i] = i + minq;
+    }
+    for(int i = 0; i < (nWins * nq); i++)
+    {
        fVec[i] = 0.0;
     }
 
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
-    DFA dfa(in_cs, N);
+    int th = atoi(argv[2]);
+    int th2D = atoi(argv[3]);
+    //DFA dfa(in_cs, N);
+    MFDFA mfdfa(in_cs, N);
 
     cudaEvent_t start_o, stop_o, start_i, stop_i;
     float elapsedTime_o, elapsedTime_i;
@@ -45,36 +62,33 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    dfa.computeFlucVec(wins, nWins, fVec);
+    //dfa.computeFlucVec(wins, nWins, fVec, th);
+    mfdfa.computeFlucVec(wins, nWins, qs, nq, fVec, th);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
     cudaEventSynchronize(stop_o);
 
     cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
-    fprintf(stderr, "GPU Time (outer) : %f ms\n", elapsedTime_o);
-
-    //for(int i = 0; i < 3; i++)
-    //    std::cout << fVec[i] << std::endl;
+    fprintf(stderr, "1D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
 
     cudaEventCreate(&start_i);
     cudaEventRecord(start_i, 0);
 
-    dfa.computeFlucVecInner(wins, nWins, fVec);
+    //dfa.computeFlucVecInner(wins, nWins, fVec);
+    mfdfa.computeFlucVec2D(wins, nWins, qs, nq, fVec, th2D);
 
     cudaEventCreate(&stop_i);
     cudaEventRecord(stop_i, 0);
     cudaEventSynchronize(stop_i);
 
     cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
-    fprintf(stderr, "GPU Time (inner) : %f ms\n", elapsedTime_i);
-
-    //for(int i = 0; i < 3; i++)
-    //    std::cout << fVec[i] << std::endl;
+    fprintf(stderr, "2D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
 
     delete [] in;
     delete [] in_cs;
     delete [] wins;
+    delete [] qs;
     delete [] fVec;    
 
     return 0;
