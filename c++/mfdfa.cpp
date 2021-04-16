@@ -43,7 +43,7 @@ MFDFA::~MFDFA()
 void MFDFA::computeFlucVec(int *winSizes, int nWins, double *qVals, int nq, double *F, int threads, bool revSeg)
 {
     double *d_F = nullptr;
-    cudaErr = cudaMalloc(&d_F, nWins * nq * sizeof(double));
+    cudaErr = cudaMalloc(&d_F, nWins * sizeof(double));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
@@ -56,33 +56,23 @@ void MFDFA::computeFlucVec(int *winSizes, int nWins, double *qVals, int nq, doub
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    double *d_qVals = nullptr;
-    cudaErr = cudaMalloc(&d_qVals, nq * sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    for(int iq = 0; iq < nq; iq++)
+    {
+        cudaMFDFA(d_y, d_t, len, d_winSizes, nWins, qVals[iq], d_F, threads);
+        cudaErr = cudaGetLastError();
+        if(cudaErr != cudaSuccess)
+            fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMemcpy(d_qVals, qVals, nq * sizeof(double), cudaMemcpyHostToDevice);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaMFDFA(d_y, d_t, len, d_winSizes, nWins, d_qVals, nq, d_F, threads);
-    cudaErr = cudaGetLastError();
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaErr = cudaMemcpy(F, d_F, nWins * nq * sizeof(double), cudaMemcpyDeviceToHost);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+        cudaErr = cudaMemcpy(&F[iq * nWins], d_F, nWins * sizeof(double), cudaMemcpyDeviceToHost);
+        if(cudaErr != cudaSuccess)
+            fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    }
 
     cudaErr = cudaFree(d_F);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
     cudaErr = cudaFree(d_winSizes);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaErr = cudaFree(d_qVals);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 

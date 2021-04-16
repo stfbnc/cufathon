@@ -5,14 +5,12 @@
 __global__
 void MFDFAKernel(const double * __restrict__ y, const double * __restrict__ t, int N,
                  const int * __restrict__ winSizes, int nWins,
-                 const double * __restrict__ qVals, int iq,
-                 double * __restrict__ flucVec)
+                 double qVal, double * __restrict__ flucVec)
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
     
     if(nWin < nWins)
     {
-        double qVal = qVals[iq];
         int currWinSize = winSizes[nWin];
         int Ns = N / currWinSize;
         double f = 0.0;
@@ -43,23 +41,20 @@ void MFDFAKernel(const double * __restrict__ y, const double * __restrict__ t, i
 
         if(qVal == 0.0)
         {
-            flucVec[iq * nWins + nWin] = exp(f / (2.0 * Ns));
+            flucVec[nWin] = exp(f / (2.0 * Ns));
         }
         else
         {
-            flucVec[iq * nWins + nWin] = pow(f / Ns, 1.0 / qVal);
+            flucVec[nWin] = pow(f / Ns, 1.0 / qVal);
         }
     }
 }
 
-void cudaMFDFA(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, double *flucVec, int nThreads)
+void cudaMFDFA(double *y, double *t, int N, int *winSizes, int nWins, double qVal, double *flucVec, int nThreads)
 {
     dim3 threadsPerBlock(nThreads);
     dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
-    for(int iq = 0; iq < nq; iq++)
-    {
-        MFDFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, winSizes, nWins, qVals, iq, flucVec);
-    }
+    MFDFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, winSizes, nWins, qVal, flucVec);
     cudaDeviceSynchronize();
 }
 
