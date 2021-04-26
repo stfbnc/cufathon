@@ -90,6 +90,20 @@ void HTKernel(const double * __restrict__ y, const double * __restrict__ t, int 
     }
 }
 
+__global__
+void finalHTKernel(double * __restrict__ vecht, double Ns,
+      int scale, int prevScale,
+      double *H0, double *H0_intercept)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(i < Ns)
+    {
+        double dscale = static_cast<double>(scale);
+        vecht[prevScale + i] = (*H0_intercept + *H0 * log(dscale) - log(vecht[prevScale + i])) / (log(Ns) - log(dscale)) + *H0;
+    }
+}
+
 void cudaHT(double *y, double *t, int N, int *scales, int nScales, double *flucVec, int nThreads, int nThreads_mfdfa)
 {
     cudaError_t cudaErr;
@@ -156,8 +170,25 @@ void cudaHT(double *y, double *t, int N, int *scales, int nScales, double *flucV
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
+    double *d_H_mfdfa, *d_I_mfdfa;
+    cudaErr = cudaMalloc(&d_H_mfdfa, sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaErr = cudaMalloc(&d_I_mfdfa, sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    fit_intX<<<1, 1>>>(nWins, d_winSizes, flucVec_mfdfa, d_H_mfdfa, d_I_mfdfa);
+    cudaDeviceSynchronize();
+
+    for(int i = 0; i < nScales; i++)
+    {
+        double Ns = N - scales[i] + 1;
+        dim3 blocksPerGrid((Ns + nThreads - 1) / nThreads);
+        finalHTKernel<<<blocksPerGrid, threadsPerBlock>>>(flucVec, Ns, scales[i], prevScales[i], d_H_mfdfa, d_I_mfdfa);
+    }
+    cudaDeviceSynchronize();
+
     delete [] prevScales;
-    //delete [] Ns;
 
     cudaErr = cudaFree(d_winSizes);
     if(cudaErr != cudaSuccess)
@@ -244,6 +275,24 @@ void cudaHT_2(double *y, double *t, int N, int *scales, int nScales, double *flu
     cudaErr = cudaStreamDestroy(stream_2);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    double *d_H_mfdfa, *d_I_mfdfa;
+    cudaErr = cudaMalloc(&d_H_mfdfa, sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaErr = cudaMalloc(&d_I_mfdfa, sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    fit_intX<<<1, 1>>>(nWins, d_winSizes, flucVec_mfdfa, d_H_mfdfa, d_I_mfdfa);
+    cudaDeviceSynchronize();
+
+    for(int i = 0; i < nScales; i++)
+    {
+        double Ns = N - scales[i] + 1;
+        dim3 blocksPerGrid((Ns + nThreads - 1) / nThreads);
+        finalHTKernel<<<blocksPerGrid, threadsPerBlock>>>(flucVec, Ns, scales[i], prevScales[i], d_H_mfdfa, d_I_mfdfa);
+    }
+    cudaDeviceSynchronize();
 
     delete [] prevScales;
 
