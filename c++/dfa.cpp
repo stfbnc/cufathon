@@ -40,7 +40,7 @@ DFA::~DFA()
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
-void DFA::computeFlucVec(int *winSizes, int nWins, double *F, int threads, bool revSeg)
+void DFA::computeFlucVec(int *winSizes, int nWins, double *F, double I, double H, int threads, bool revSeg)
 {
     double *flucVec = nullptr;
     cudaErr = cudaMalloc(&flucVec, nWins * sizeof(double));
@@ -56,7 +56,7 @@ void DFA::computeFlucVec(int *winSizes, int nWins, double *F, int threads, bool 
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaDFA(d_y, d_t, len, winSizesGpu, nWins, flucVec, threads);
+    cudaDFA(d_y, d_t, len, winSizesGpu, nWins, flucVec, &I, &H, threads);
     cudaErr = cudaGetLastError();
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));

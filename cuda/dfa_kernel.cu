@@ -32,14 +32,57 @@ void DFAKernel(const double * __restrict__ y, const double * __restrict__ t, int
     }
 }
 
-void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, int nThreads)
+void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, double *I, double *H, int nThreads)
 {
+    cudaError_t cudaErr;
+
     dim3 threadsPerBlock(nThreads);
     dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
     DFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, winSizes, nWins, flucVec);
     cudaDeviceSynchronize();
-}
 
+    double *logW, *logF;
+    cudaErr = cudaMalloc(&logW, nWins * sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaErr = cudaMalloc(&logF, nWins * sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    
+    cudaStream_t stream_1, stream_2;
+    cudaStreamCreate(&stream_1);
+    cudaStreamCreate(&stream_2);
+    doubleToLog<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(flucVec, logF, nWins);
+    intToLog<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(winSizes, logW, nWins);
+    cudaStreamDestroy(stream_1);
+    cudaStreamDestroy(stream_2);
+
+    double *d_H, *d_I;
+    cudaErr = cudaMalloc(&d_H, sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaErr = cudaMalloc(&d_I, sizeof(double));
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    hFit<<<1, 1>>>(nWins, logW, logF, d_H, d_I);
+    cudaDeviceSynchronize();
+
+    cudaErr = cudaMemcpy(I, d_I, sizeof(double), cudaMemcpyDeviceToHost);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaErr = cudaMemcpy(H, d_H, sizeof(double), cudaMemcpyDeviceToHost);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    cudaErr = cudaFree(d_H);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaErr = cudaFree(d_I);
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    fprintf(stderr, "I = %lf, H = %lf\n", *I, *H);
+}
 
 __global__
 void DFAKernelInner(const double * __restrict__ y, const double * __restrict__ t, int N,

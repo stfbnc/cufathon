@@ -28,6 +28,16 @@ int main(int argc, char **argv)
     for(int i = 1; i < N; i++)
         in_cs[i] = in_cs[i - 1] + in[i];
 
+    /*char file_name[64];
+    sprintf(file_name, "test_file.txt", N);
+    FILE *out_file = fopen(file_name, "w");
+    fprintf(out_file, "in,in_cs\n");
+    for(int i = 0; i < N; i++)
+    {
+	fprintf(out_file, "%.6f,%.6f\n", in[i], in_cs[i]);
+    }
+    fclose(out_file);*/
+
     int minWin = 10;
     int minq = -4;
     int nWins = N / 4 - minWin;
@@ -36,11 +46,10 @@ int main(int argc, char **argv)
     int *wins = new int [nWins];
     double *qs = new double [nq];
     int *scales = new int [nScales];
-    //double *fVec = new double [nWins * nq];
+    double *fVec = new double [nWins];  //  * nq];
     for(int i = 0; i < nWins; i++)
     {
         wins[i] = i + minWin;
-        //fVec[i] = 0.0;
     }
     for(int i = 0; i < nq; i++)
     {
@@ -54,9 +63,10 @@ int main(int argc, char **argv)
     }
     
     int hfLen = nScales * (N + 1) - sLen;
-    double *fVec = new double [hfLen];
+    //double *fVec = new double [hfLen];
     //for(int i = 0; i < (nWins * nq); i++)
-    for(int i = 0; i < hfLen; i++)
+    //for(int i = 0; i < hfLen; i++)
+    for(int i = 0; i < nWins; i++)
     {
         fVec[i] = 0.0;
     }
@@ -65,10 +75,10 @@ int main(int argc, char **argv)
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
     int th = atoi(argv[2]);
-    int th2D = atoi(argv[3]);
-    //DFA dfa(in_cs, N);
+    //int th2D = atoi(argv[3]);
+    DFA dfa(in_cs, N);
     //MFDFA mfdfa(in_cs, N);
-    HT ht(in_cs, N);
+    //HT ht(in_cs, N);
 
     cudaEvent_t start_o, stop_o, start_i, stop_i;
     float elapsedTime_o, elapsedTime_i;
@@ -76,9 +86,10 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    //dfa.computeFlucVec(wins, nWins, fVec, th);
+    double I = 0.0, H = 0.0;
+    dfa.computeFlucVec(wins, nWins, fVec, I, H, th);
     //mfdfa.computeFlucVec(wins, nWins, qs, nq, fVec, th);
-    ht.computeFlucVec(scales, nScales, fVec, th, th2D);
+    //ht.computeFlucVec(scales, nScales, fVec, th, th2D);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
@@ -87,19 +98,19 @@ int main(int argc, char **argv)
     cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
     fprintf(stderr, "1D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
 
-    cudaEventCreate(&start_i);
-    cudaEventRecord(start_i, 0);
+    //cudaEventCreate(&start_i);
+    //cudaEventRecord(start_i, 0);
 
     //dfa.computeFlucVecInner(wins, nWins, fVec);
     //mfdfa.computeFlucVec2D(wins, nWins, qs, nq, fVec, th2D);
-    ht.computeFlucVec_2(scales, nScales, fVec, th, th2D);
+    //ht.computeFlucVec_2(scales, nScales, fVec, th, th2D);
 
-    cudaEventCreate(&stop_i);
-    cudaEventRecord(stop_i, 0);
-    cudaEventSynchronize(stop_i);
+    //cudaEventCreate(&stop_i);
+    //cudaEventRecord(stop_i, 0);
+    //cudaEventSynchronize(stop_i);
 
-    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
-    fprintf(stderr, "2D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+    //cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
+    //fprintf(stderr, "2D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
 
     delete [] in;
     delete [] in_cs;

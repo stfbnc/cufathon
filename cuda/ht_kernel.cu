@@ -177,7 +177,7 @@ void cudaHT(double *y, double *t, int N, int *scales, int nScales, double *flucV
     cudaErr = cudaMalloc(&d_I_mfdfa, sizeof(double));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    fit_intX<<<1, 1>>>(nWins, d_winSizes, flucVec_mfdfa, d_H_mfdfa, d_I_mfdfa);
+    //fit_intX<<<1, 1>>>(nWins, d_winSizes, flucVec_mfdfa, d_H_mfdfa, d_I_mfdfa);
     cudaDeviceSynchronize();
 
     for(int i = 0; i < nScales; i++)
@@ -283,7 +283,7 @@ void cudaHT_2(double *y, double *t, int N, int *scales, int nScales, double *flu
     cudaErr = cudaMalloc(&d_I_mfdfa, sizeof(double));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    fit_intX<<<1, 1>>>(nWins, d_winSizes, flucVec_mfdfa, d_H_mfdfa, d_I_mfdfa);
+    //fit_intX<<<1, 1>>>(nWins, d_winSizes, flucVec_mfdfa, d_H_mfdfa, d_I_mfdfa);
     cudaDeviceSynchronize();
 
     for(int i = 0; i < nScales; i++)

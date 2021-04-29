@@ -11,7 +11,7 @@ class DFA
 public:
     explicit DFA(double *h_y, int yLen);
     ~DFA();
-    void computeFlucVec(int *winSizes, int nWins, double *F, int threads, bool revSeg=false);
+    void computeFlucVec(int *winSizes, int nWins, double *F, double I, double H, int threads, bool revSeg=false);
     void computeFlucVecInner(int *winSizes, int nWins, double *F, bool revSeg=false);
 private:
     cudaError_t cudaErr;

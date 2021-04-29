@@ -22,3 +22,25 @@ void linRange(double *vec, int N, int start)
     cudaDeviceSynchronize();
 }
 
+__global__
+void doubleToLog(const double * __restrict__ vec, double * __restrict__ logVec, int N)
+{
+    int tx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(tx < N)
+    {
+        logVec[tx] = log(vec[tx]);
+    } 
+}
+
+__global__
+void intToLog(const int * __restrict__ vec, double * __restrict__ logVec, int N)
+{
+    int tx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(tx < N)
+    {
+        logVec[tx] = log(1.0 * vec[tx]);
+    }
+}
+

@@ -2,7 +2,7 @@
 
 
 __global__
-void fit_intX(int L, const int * __restrict__ x, const double * __restrict__ y,
+void hFit(int L, const double * __restrict__ x, const double * __restrict__ y,
               double *ang_coeff, double *intercept)
 {
     double sumx = 0.0;
