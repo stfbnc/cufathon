@@ -12,11 +12,10 @@ public:
     explicit DFA(double *h_y, int yLen);
     ~DFA();
     void computeFlucVec(int *winSizes, int nWins, double *F, double I, double H, int threads, bool revSeg=false);
-    void computeFlucVecInner(int *winSizes, int nWins, double *F, bool revSeg=false);
 private:
     cudaError_t cudaErr;
-    double *d_y = nullptr;
-    double *d_t = nullptr;
+    double *d_y;
+    double *d_t;
     int len = 0;
 };
 

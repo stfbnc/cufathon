@@ -9,6 +9,7 @@
 
 #include "cudaProfiler.h"
 
+#define DFA_MAIN
 
 int main(int argc, char **argv)
 {
@@ -38,48 +39,24 @@ int main(int argc, char **argv)
     }
     fclose(out_file);*/
 
+#ifdef DFA_MAIN
     int minWin = 10;
-    int minq = -4;
     int nWins = N / 4 - minWin;
-    int nq = 10;
-    int nScales = 10;
     int *wins = new int [nWins];
-    double *qs = new double [nq];
-    int *scales = new int [nScales];
-    double *fVec = new double [nWins];  //  * nq];
+    double *fVec = new double [nWins];
+    
     for(int i = 0; i < nWins; i++)
     {
         wins[i] = i + minWin;
     }
-    for(int i = 0; i < nq; i++)
-    {
-        qs[i] = i + minq;
-    }
-    int sLen = 0;
-    for(int i = 0; i < nScales; i++)
-    {
-        scales[i] = 10 * (i + 1);
-        sLen += scales[i];
-    }
     
-    int hfLen = nScales * (N + 1) - sLen;
-    //double *fVec = new double [hfLen];
-    //for(int i = 0; i < (nWins * nq); i++)
-    //for(int i = 0; i < hfLen; i++)
-    for(int i = 0; i < nWins; i++)
-    {
-        fVec[i] = 0.0;
-    }
-
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
     int th = atoi(argv[2]);
-    //int th2D = atoi(argv[3]);
+    
     DFA dfa(in_cs, N);
-    //MFDFA mfdfa(in_cs, N);
-    //HT ht(in_cs, N);
-
+    
     cudaEvent_t start_o, stop_o, start_i, stop_i;
     float elapsedTime_o, elapsedTime_i;
 
@@ -88,35 +65,149 @@ int main(int argc, char **argv)
 
     double I = 0.0, H = 0.0;
     dfa.computeFlucVec(wins, nWins, fVec, I, H, th);
-    //mfdfa.computeFlucVec(wins, nWins, qs, nq, fVec, th);
-    //ht.computeFlucVec(scales, nScales, fVec, th, th2D);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
     cudaEventSynchronize(stop_o);
 
     cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
-    fprintf(stderr, "1D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
+    fprintf(stderr, "DFA FW -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
 
-    //cudaEventCreate(&start_i);
-    //cudaEventRecord(start_i, 0);
+    cudaEventCreate(&start_i);
+    cudaEventRecord(start_i, 0);
 
-    //dfa.computeFlucVecInner(wins, nWins, fVec);
-    //mfdfa.computeFlucVec2D(wins, nWins, qs, nq, fVec, th2D);
-    //ht.computeFlucVec_2(scales, nScales, fVec, th, th2D);
+    dfa.computeFlucVec(wins, nWins, fVec, I, H, th, true);
 
-    //cudaEventCreate(&stop_i);
-    //cudaEventRecord(stop_i, 0);
-    //cudaEventSynchronize(stop_i);
+    cudaEventCreate(&stop_i);
+    cudaEventRecord(stop_i, 0);
+    cudaEventSynchronize(stop_i);
 
-    //cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
-    //fprintf(stderr, "2D -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
+    fprintf(stderr, "DFA BW -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+
+    delete [] wins;
+    delete [] fVec;
+#endif
+
+#ifdef MFDFA_MAIN
+    int minWin = 10;
+    int minq = -4;
+    int nWins = N / 4 - minWin;
+    int nq = 10;
+    int *wins = new int [nWins];
+    double *qs = new double [nq];
+    double *fVec = new double [nWins * nq];
+
+    for(int i = 0; i < nWins; i++)
+    {
+        wins[i] = i + minWin;
+    }
+    for(int i = 0; i < nq; i++)
+    {
+        qs[i] = i + minq;
+    }
+
+    /*for(int i = 0; i < (nWins * nq); i++)
+    {
+        fVec[i] = 0.0;
+    }*/
+
+    fprintf(stderr, "Input vector length: %d\n", N);
+    fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
+
+    int th = atoi(argv[2]);
+    int th2D = atoi(argv[3]);
+    MFDFA mfdfa(in_cs, N);
+
+    cudaEvent_t start_o, stop_o, start_i, stop_i;
+    float elapsedTime_o, elapsedTime_i;
+
+    cudaEventCreate(&start_o);
+    cudaEventRecord(start_o, 0);
+
+    mfdfa.computeFlucVec(wins, nWins, qs, nq, fVec, th);
+
+    cudaEventCreate(&stop_o);
+    cudaEventRecord(stop_o, 0);
+    cudaEventSynchronize(stop_o);
+
+    cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
+    fprintf(stderr, "1D MFDFA -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
+
+    cudaEventCreate(&start_i);
+    cudaEventRecord(start_i, 0);
+
+    mfdfa.computeFlucVec2D(wins, nWins, qs, nq, fVec, th2D);
+
+    cudaEventCreate(&stop_i);
+    cudaEventRecord(stop_i, 0);
+    cudaEventSynchronize(stop_i);
+
+    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
+    fprintf(stderr, "2D MFDFA -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+
+    delete [] wins;
+    delete [] qs;
+    delete [] fVec;
+#endif
+
+#ifdef HT_MAIN
+    int nScales = 10;
+    int *scales = new int [nScales];
+    
+    int sLen = 0;
+    for(int i = 0; i < nScales; i++)
+    {
+        scales[i] = 10 * (i + 1);
+        sLen += scales[i];
+    }
+    
+    int hfLen = nScales * (N + 1) - sLen;
+    double *fVec = new double [hfLen];
+    /*for(int i = 0; i < hfLen; i++)
+    {
+        fVec[i] = 0.0;
+    }*/
+
+    fprintf(stderr, "Input vector length: %d\n", N);
+    fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
+
+    int th = atoi(argv[2]);
+    int th2D = atoi(argv[3]);
+    HT ht(in_cs, N);
+
+    cudaEvent_t start_o, stop_o, start_i, stop_i;
+    float elapsedTime_o, elapsedTime_i;
+
+    cudaEventCreate(&start_o);
+    cudaEventRecord(start_o, 0);
+
+    ht.computeFlucVec(scales, nScales, fVec, th, th2D);
+
+    cudaEventCreate(&stop_o);
+    cudaEventRecord(stop_o, 0);
+    cudaEventSynchronize(stop_o);
+
+    cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
+    fprintf(stderr, "HT (1) -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
+
+    cudaEventCreate(&start_i);
+    cudaEventRecord(start_i, 0);
+
+    ht.computeFlucVec_2(scales, nScales, fVec, th, th2D);
+
+    cudaEventCreate(&stop_i);
+    cudaEventRecord(stop_i, 0);
+    cudaEventSynchronize(stop_i);
+
+    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
+    fprintf(stderr, "HT (2) -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+
+    delete [] fVec;
+#endif
 
     delete [] in;
     delete [] in_cs;
-    delete [] wins;
-    delete [] qs;
-    delete [] fVec;    
 
     return 0;
 }

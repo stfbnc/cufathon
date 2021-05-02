@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "dfa_kernel.cuh"
 
 
@@ -32,56 +31,106 @@ void DFAKernel(const double * __restrict__ y, const double * __restrict__ t, int
     }
 }
 
-void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, double *I, double *H, int nThreads)
+__global__
+void DFAKernelBackwards(const double * __restrict__ y, const double * __restrict__ t, int N,
+                        const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
 {
-    cudaError_t cudaErr;
+    int nWin = blockIdx.x * blockDim.x + threadIdx.x;
 
+    if(nWin < nWins)
+    {
+        int currWinSize = winSizes[nWin];
+        int Ns = N / currWinSize;
+        double f = 0.0;
+
+        for(int i = 0; i < Ns; i++)
+        {
+            int startLim = i * currWinSize;
+            double m = 0.0, q = 0.0;
+
+            fit(currWinSize, t + startLim, y + startLim, &m, &q);
+
+            for(int j = 0; j < currWinSize; j++)
+            {
+                double var = y[startLim + j] - (q + m * t[startLim + j]);
+                f += pow(var, 2.0);
+            }
+
+            startLim = i * currWinSize + (N - Ns * currWinSize);
+            fit(currWinSize, t + startLim, y + startLim, &m, &q);
+
+            for(int j = 0; j < currWinSize; j++)
+            {
+                double var = y[startLim + j] - (q + m * t[startLim + j]);
+                f += pow(var, 2.0);
+            }
+        }
+
+        flucVec[nWin] = sqrt(f / (2.0 * Ns * currWinSize));
+    }
+}
+
+void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, bool revSeg, double *flucVec, double *I, double *H, int nThreads)
+{
+    // device variables
+    double *d_flucVec;
+    cudaMalloc(&d_flucVec, nWins * sizeof(double));
+
+    int *d_winSizes;
+    cudaMalloc(&d_winSizes, nWins * sizeof(int));
+
+    // copy to device
+    cudaMemcpy(d_winSizes, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+
+    // dfa kernel
     dim3 threadsPerBlock(nThreads);
     dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
-    DFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, winSizes, nWins, flucVec);
-    cudaDeviceSynchronize();
+    if(revSeg)
+    {
+        DFAKernelBackwards<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, d_winSizes, nWins, d_flucVec);
+    }
+    else
+    {
+        DFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, d_winSizes, nWins, d_flucVec);
+    }
 
-    double *logW, *logF;
-    cudaErr = cudaMalloc(&logW, nWins * sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    cudaErr = cudaMalloc(&logF, nWins * sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    // device variables
+    double *d_logW, *d_logF;
+    cudaMalloc(&d_logW, nWins * sizeof(double));
+    cudaMalloc(&d_logF, nWins * sizeof(double));
     
+    // log transforms
     cudaStream_t stream_1, stream_2;
     cudaStreamCreate(&stream_1);
     cudaStreamCreate(&stream_2);
-    doubleToLog<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(flucVec, logF, nWins);
-    intToLog<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(winSizes, logW, nWins);
+   
+    doubleToLog<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(d_flucVec, d_logF, nWins);
+    intToLog<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(d_winSizes, d_logW, nWins);
+   
     cudaStreamDestroy(stream_1);
     cudaStreamDestroy(stream_2);
 
+    // device variables
     double *d_H, *d_I;
-    cudaErr = cudaMalloc(&d_H, sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    cudaErr = cudaMalloc(&d_I, sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    hFit<<<1, 1>>>(nWins, logW, logF, d_H, d_I);
-    cudaDeviceSynchronize();
+    cudaMalloc(&d_H, sizeof(double));
+    cudaMalloc(&d_I, sizeof(double));
+   
+    // fit kernel
+    hFit<<<1, 1>>>(nWins, d_logW, d_logF, d_H, d_I);
 
-    cudaErr = cudaMemcpy(I, d_I, sizeof(double), cudaMemcpyDeviceToHost);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    cudaErr = cudaMemcpy(H, d_H, sizeof(double), cudaMemcpyDeviceToHost);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    // copy to host
+    cudaMemcpy(flucVec, d_flucVec, nWins * sizeof(double), cudaMemcpyDeviceToHost);
 
-    cudaErr = cudaFree(d_H);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-    cudaErr = cudaFree(d_I);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+    cudaMemcpy(I, d_I, sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(H, d_H, sizeof(double), cudaMemcpyDeviceToHost);
 
-    fprintf(stderr, "I = %lf, H = %lf\n", *I, *H);
+    // free memory
+    cudaFree(d_flucVec);
+    cudaFree(d_winSizes);
+    cudaFree(d_logW);
+    cudaFree(d_logF);
+    cudaFree(d_H);
+    cudaFree(d_I);
 }
 
 __global__
@@ -129,10 +178,3 @@ void DFAKernelInner(const double * __restrict__ y, const double * __restrict__ t
     }
 }
 
-void cudaDFAInner(double *y, double *t, int N, int *winSizes, int nWins, double *flucVec, int nThreads)
-{
-    dim3 threadsPerBlock(nThreads);
-    dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
-    DFAKernelInner<<<blocksPerGrid, threadsPerBlock, 2 * N * sizeof(double)>>>(y, t, N, winSizes, nWins, flucVec);
-    cudaDeviceSynchronize();
-}
