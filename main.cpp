@@ -9,7 +9,7 @@
 
 #include "cudaProfiler.h"
 
-#define DFA_MAIN
+#define MFDFA_MAIN
 
 int main(int argc, char **argv)
 {
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
     int nq = 10;
     int *wins = new int [nWins];
     double *qs = new double [nq];
-    double *fVec = new double [nWins * nq];
+    double *hq = new double [nq];
 
     for(int i = 0; i < nWins; i++)
     {
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
     int th = atoi(argv[2]);
-    int th2D = atoi(argv[3]);
+    //int th2D = atoi(argv[3]);
     MFDFA mfdfa(in_cs, N);
 
     cudaEvent_t start_o, stop_o, start_i, stop_i;
@@ -125,30 +125,30 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    mfdfa.computeFlucVec(wins, nWins, qs, nq, fVec, th);
+    mfdfa.computeFlucVec(wins, nWins, qs, nq, hq, th);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
     cudaEventSynchronize(stop_o);
 
     cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
-    fprintf(stderr, "1D MFDFA -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
+    fprintf(stderr, "FW MFDFA -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
 
     cudaEventCreate(&start_i);
     cudaEventRecord(start_i, 0);
 
-    mfdfa.computeFlucVec2D(wins, nWins, qs, nq, fVec, th2D);
+    mfdfa.computeFlucVec(wins, nWins, qs, nq, hq, th, true);
 
     cudaEventCreate(&stop_i);
     cudaEventRecord(stop_i, 0);
     cudaEventSynchronize(stop_i);
 
     cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
-    fprintf(stderr, "2D MFDFA -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+    fprintf(stderr, "BW MFDFA -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
 
     delete [] wins;
     delete [] qs;
-    delete [] fVec;
+    delete [] hq;
 #endif
 
 #ifdef HT_MAIN
