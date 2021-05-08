@@ -8,5 +8,6 @@
 
 
 void cudaMFDFA(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, bool revSeg, double *hq, int nThreads);
+void cudaMultifractalSpectrum(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, bool revSeg, double *a, double *fa, int nThreads);
 
 #endif

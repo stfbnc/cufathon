@@ -52,3 +52,15 @@ void MFDFA::computeFlucVec(int *winSizes, int nWins, double *qVals, int nq, doub
     fprintf(stderr, "hq[%d]: %lf\n", nq - 1, hq[nq - 1]);
 }
 
+void MFDFA::computeMultifractalSpectrum(int *winSizes, int nWins, double *qVals, int nq, double *a, double *fa, int threads, bool revSeg)
+{
+    cudaMultifractalSpectrum(d_y, d_t, len, winSizes, nWins, qVals, nq, revSeg, a, fa, threads);
+    cudaErr = cudaGetLastError();
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    fprintf(stderr, "a[0]: %lf | fa[0] = %lf\n", a[0], fa[0]);
+    fprintf(stderr, "a[%d]: %lf | fa[%d] = %lf\n", nq / 2, a[nq / 2], nq / 2, fa[nq / 2]);
+    fprintf(stderr, "a[%d]: %lf | fa[%d] = %lf\n", nq - 2, a[nq - 2], nq - 2, fa[nq - 2]);
+}
+

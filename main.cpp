@@ -30,7 +30,7 @@ int main(int argc, char **argv)
         in_cs[i] = in_cs[i - 1] + in[i];
 
     /*char file_name[64];
-    sprintf(file_name, "test_file.txt", N);
+    sprintf(file_name, "test_file_2.txt");
     FILE *out_file = fopen(file_name, "w");
     fprintf(out_file, "in,in_cs\n");
     for(int i = 0; i < N; i++)
@@ -97,6 +97,8 @@ int main(int argc, char **argv)
     int *wins = new int [nWins];
     double *qs = new double [nq];
     double *hq = new double [nq];
+    double *a = new double [nq - 1];
+    double *fa = new double [nq - 1];
 
     for(int i = 0; i < nWins; i++)
     {
@@ -107,16 +109,10 @@ int main(int argc, char **argv)
         qs[i] = i + minq;
     }
 
-    /*for(int i = 0; i < (nWins * nq); i++)
-    {
-        fVec[i] = 0.0;
-    }*/
-
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
     int th = atoi(argv[2]);
-    //int th2D = atoi(argv[3]);
     MFDFA mfdfa(in_cs, N);
 
     cudaEvent_t start_o, stop_o, start_i, stop_i;
@@ -125,7 +121,8 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    mfdfa.computeFlucVec(wins, nWins, qs, nq, hq, th);
+    //mfdfa.computeFlucVec(wins, nWins, qs, nq, hq, th);
+    mfdfa.computeMultifractalSpectrum(wins, nWins, qs, nq, a, fa, th);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
@@ -137,7 +134,8 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_i);
     cudaEventRecord(start_i, 0);
 
-    mfdfa.computeFlucVec(wins, nWins, qs, nq, hq, th, true);
+    //mfdfa.computeFlucVec(wins, nWins, qs, nq, hq, th, true);
+    mfdfa.computeMultifractalSpectrum(wins, nWins, qs, nq, a, fa, th, true);
 
     cudaEventCreate(&stop_i);
     cudaEventRecord(stop_i, 0);
@@ -149,6 +147,8 @@ int main(int argc, char **argv)
     delete [] wins;
     delete [] qs;
     delete [] hq;
+    delete [] a;
+    delete [] fa;
 #endif
 
 #ifdef HT_MAIN

@@ -126,6 +126,20 @@ void hqKernel(const double * __restrict__ y, const double * __restrict__ x, int 
     }
 }
 
+__global__
+void faKernel(const double * __restrict__ q, const double * __restrict__ h, int nq,
+              double * __restrict__ a, double * __restrict__ fa)
+{
+    int iq = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if(iq < (nq - 1))
+    {
+        double dq = q[1] - q[0];
+        a[iq] = (h[iq + 1] * q[iq + 1] - h[iq] * q[iq]) / dq;
+        fa[iq] = q[iq] * (a[iq] - h[iq]) + 1;
+    }
+}
+
 void cudaMFDFA(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, bool revSeg, double *hq, int nThreads)
 {
     // device variables
@@ -193,3 +207,85 @@ void cudaMFDFA(double *y, double *t, int N, int *winSizes, int nWins, double *qV
     cudaFree(d_logW);
     cudaFree(d_logF);
 }
+
+void cudaMultifractalSpectrum(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, bool revSeg, double *a, double *fa, int nThreads)
+{
+    // device variables
+    double *d_F;
+    cudaMalloc(&d_F, nWins * nq * sizeof(double));
+
+    int *d_winSizes;
+    cudaMalloc(&d_winSizes, nWins * sizeof(int));
+
+    double *d_qVals;
+    cudaMalloc(&d_qVals, nq * sizeof(double));
+
+    double *d_hq;
+    cudaMalloc(&d_hq, nq * sizeof(double));
+
+    // copy to device
+    cudaMemcpy(d_winSizes, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qVals, qVals, nq * sizeof(double), cudaMemcpyHostToDevice);
+
+    // mfdfa kernel
+    dim3 threadsPerBlock(nThreads, nThreads);
+    dim3 blocksPerGrid((nq + nThreads - 1) / nThreads, (nWins + nThreads - 1) / nThreads);
+    if(revSeg)
+    {
+        MFDFAKernelBackwards<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, d_winSizes, nWins, d_qVals, nq, d_F);
+    }
+    else
+    {
+        MFDFAKernel<<<blocksPerGrid, threadsPerBlock>>>(y, t, N, d_winSizes, nWins, d_qVals, nq, d_F);
+    }
+
+    // device variables
+    double *d_logW, *d_logF;
+    cudaMalloc(&d_logW, nWins * sizeof(double));
+    cudaMalloc(&d_logF, nWins * nq * sizeof(double));
+
+    // log transforms
+    dim3 threadsPerBlock_log(nThreads * nThreads / 2);
+    dim3 blocksPerGrid_logF((nq * nWins + nThreads * nThreads / 2 - 1) / (nThreads * nThreads / 2));
+    dim3 blocksPerGrid_logW((nWins + nThreads * nThreads / 2 - 1) / (nThreads * nThreads / 2));
+
+    cudaStream_t stream_1, stream_2;
+    cudaStreamCreate(&stream_1);
+    cudaStreamCreate(&stream_2);
+
+    doubleToLog<<<blocksPerGrid_logF, threadsPerBlock_log, 0, stream_1>>>(d_F, d_logF, nWins * nq);
+    intToLog<<<blocksPerGrid_logW, threadsPerBlock_log, 0, stream_2>>>(d_winSizes, d_logW, nWins);
+
+    cudaStreamDestroy(stream_1);
+    cudaStreamDestroy(stream_2);
+
+    // hq
+    dim3 threadsPerBlock_hq(nThreads * nThreads / 2);
+    dim3 blocksPerGrid_hq((nq + nThreads * nThreads / 2 - 1) / (nThreads * nThreads / 2));
+    hqKernel<<<blocksPerGrid_hq, threadsPerBlock_hq>>>(d_logF, d_logW, nWins, d_hq, nq);
+
+    // device variables
+    double *d_a, *d_fa;
+    cudaMalloc(&d_a, (nq - 1) * sizeof(double));
+    cudaMalloc(&d_fa, (nq - 1) * sizeof(double));
+
+    // multifractal spectrum
+    dim3 threadsPerBlock_fa(nThreads * nThreads / 2);
+    dim3 blocksPerGrid_fa((nq - 1 + nThreads * nThreads / 2 - 1) / (nThreads * nThreads / 2));
+    faKernel<<<blocksPerGrid_fa, threadsPerBlock_fa>>>(d_qVals, d_hq, nq, d_a, d_fa);
+
+    // copy to host
+    cudaMemcpy(a, d_a, (nq - 1) * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(fa, d_fa, (nq - 1) * sizeof(double), cudaMemcpyDeviceToHost);
+
+    // free memory
+    cudaFree(d_F);
+    cudaFree(d_winSizes);
+    cudaFree(d_qVals);
+    cudaFree(d_hq);
+    cudaFree(d_logW);
+    cudaFree(d_logF);
+    cudaFree(d_a);
+    cudaFree(d_fa);
+}
+
