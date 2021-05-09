@@ -40,63 +40,15 @@ HT::~HT()
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
-void HT::computeFlucVec(int *scales, int nScales, double *F, int threads, int threads_mfdfa)
+void HT::computeFlucVec(int *scales, int nScales, double *ht, int threads)
 {
-    int sLen = 0;
-    for(int i = 0; i < nScales; i++)
-    {
-        sLen += (len - scales[i] + 1);
-    }
-
-    double *flucVec = nullptr;
-    cudaErr = cudaMalloc(&flucVec, sLen * sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaHT(d_y, d_t, len, scales, nScales, flucVec, threads, threads_mfdfa);
+    cudaHT(d_y, d_t, len, scales, nScales, ht, threads);
     cudaErr = cudaGetLastError();
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMemcpy(F, flucVec, sLen * sizeof(double), cudaMemcpyDeviceToHost);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaErr = cudaFree(flucVec);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    fprintf(stderr, "F[0]: %lf\n", F[0]);
-    fprintf(stderr, "F[%d]: %lf\n", sLen / 2, F[sLen / 2]);
-    fprintf(stderr, "F[%d]: %lf\n", sLen - 1, F[sLen - 1]);
+    fprintf(stderr, "ht[0]: %lf\n", ht[0]);
+    fprintf(stderr, "ht[%d]: %lf\n", 50, ht[50]);
+    fprintf(stderr, "ht[%d]: %lf\n", 100, ht[100]);
 }
-void HT::computeFlucVec_2(int *scales, int nScales, double *F, int threads, int threads_mfdfa)
-{
-    int sLen = 0;
-    for(int i = 0; i < nScales; i++)
-    {
-        sLen += (len - scales[i] + 1);
-    }
 
-    double *flucVec = nullptr;
-    cudaErr = cudaMalloc(&flucVec, sLen * sizeof(double));
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaHT_2(d_y, d_t, len, scales, nScales, flucVec, threads, threads_mfdfa);
-    cudaErr = cudaGetLastError();
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaErr = cudaMemcpy(F, flucVec, sLen * sizeof(double), cudaMemcpyDeviceToHost);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    cudaErr = cudaFree(flucVec);
-    if(cudaErr != cudaSuccess)
-        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
-
-    fprintf(stderr, "F[0]: %lf\n", F[0]);
-    fprintf(stderr, "F[%d]: %lf\n", sLen / 2, F[sLen / 2]);
-    fprintf(stderr, "F[%d]: %lf\n", sLen - 1, F[sLen - 1]);
-}

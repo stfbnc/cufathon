@@ -120,7 +120,6 @@ void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, bool revSeg,
 
     // copy to host
     cudaMemcpy(flucVec, d_flucVec, nWins * sizeof(double), cudaMemcpyDeviceToHost);
-
     cudaMemcpy(I, d_I, sizeof(double), cudaMemcpyDeviceToHost);
     cudaMemcpy(H, d_H, sizeof(double), cudaMemcpyDeviceToHost);
 

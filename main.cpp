@@ -9,7 +9,7 @@
 
 #include "cudaProfiler.h"
 
-#define MFDFA_MAIN
+#define HT_MAIN
 
 int main(int argc, char **argv)
 {
@@ -170,38 +170,24 @@ int main(int argc, char **argv)
     }*/
 
     fprintf(stderr, "Input vector length: %d\n", N);
-    fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
     int th = atoi(argv[2]);
-    int th2D = atoi(argv[3]);
     HT ht(in_cs, N);
 
-    cudaEvent_t start_o, stop_o, start_i, stop_i;
-    float elapsedTime_o, elapsedTime_i;
+    cudaEvent_t start_o, stop_o;
+    float elapsedTime_o;
 
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    ht.computeFlucVec(scales, nScales, fVec, th, th2D);
+    ht.computeFlucVec(scales, nScales, fVec, th);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
     cudaEventSynchronize(stop_o);
 
     cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
-    fprintf(stderr, "HT (1) -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
-
-    cudaEventCreate(&start_i);
-    cudaEventRecord(start_i, 0);
-
-    ht.computeFlucVec_2(scales, nScales, fVec, th, th2D);
-
-    cudaEventCreate(&stop_i);
-    cudaEventRecord(stop_i, 0);
-    cudaEventSynchronize(stop_i);
-
-    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
-    fprintf(stderr, "HT (2) -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+    fprintf(stderr, "HT -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
 
     delete [] fVec;
 #endif

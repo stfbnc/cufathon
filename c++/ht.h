@@ -11,8 +11,7 @@ class HT
 public:
     explicit HT(double *h_y, int yLen);
     ~HT();
-    void computeFlucVec(int *scales, int nScales, double *F, int threads, int threads_mfdfa);
-    void computeFlucVec_2(int *scales, int nScales, double *F, int threads, int threads_mfdfa);
+    void computeFlucVec(int *scales, int nScales, double *ht, int threads);
 private:
     cudaError_t cudaErr;
     double *d_y = nullptr;
