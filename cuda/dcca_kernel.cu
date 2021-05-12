@@ -36,6 +36,40 @@ void DCCAKernel(const double * __restrict__ y1, const double * __restrict__ y2,
 }
 
 __global__
+void DCCAabsKernel(const double * __restrict__ y1, const double * __restrict__ y2,
+                const double * __restrict__ t, int N,
+                const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
+{
+    int nWin = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(nWin < nWins)
+    {
+        int currWinSize = winSizes[nWin];
+        int Ns = N / currWinSize;
+        double f = 0.0;
+
+        for(int i = 0; i < Ns; i++)
+        {
+            int startLim = i * currWinSize;
+            double m1 = 0.0, q1 = 0.0;
+            double m2 = 0.0, q2 = 0.0;
+
+            fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
+            fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
+
+            for(int j = 0; j < currWinSize; j++)
+            {
+                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                f += fabs(var1 * var2);
+            }
+        }
+
+        flucVec[nWin] = sqrt(f / (Ns * currWinSize));
+    }
+}
+
+__global__
 void DCCAKernelBackwards(const double * __restrict__ y1, const double * __restrict__ y2,
                          const double * __restrict__ t, int N,
                          const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
@@ -80,7 +114,51 @@ void DCCAKernelBackwards(const double * __restrict__ y1, const double * __restri
     }
 }
 
-// Aggiungere un kernel per dfa con alla fine sqrt per fxx e fyy
+__global__
+void DCCAabsKernelBackwards(const double * __restrict__ y1, const double * __restrict__ y2,
+                         const double * __restrict__ t, int N,
+                         const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
+{
+    int nWin = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(nWin < nWins)
+    {
+        int currWinSize = winSizes[nWin];
+        int Ns = N / currWinSize;
+        double f = 0.0;
+
+        for(int i = 0; i < Ns; i++)
+        {
+            int startLim = i * currWinSize;
+            double m1 = 0.0, q1 = 0.0;
+            double m2 = 0.0, q2 = 0.0;
+
+            fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
+            fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
+
+            for(int j = 0; j < currWinSize; j++)
+            {
+                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                f += fabs(var1 * var2);
+            }
+
+            startLim = i * currWinSize + (N - Ns * currWinSize);
+            fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
+            fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
+
+            for(int j = 0; j < currWinSize; j++)
+            {
+                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                f += fabs(var1 * var2);
+            }
+        }
+
+        flucVec[nWin] = sqrt(f / (2.0 * Ns * currWinSize));
+    }
+}
+
 __global__
 void rhoKernel(const double * __restrict__ fxx, const double * __restrict__ fyy,
                const double * __restrict__ fxy, int n, double * __restrict__ p)
@@ -124,14 +202,14 @@ void cudaDCCA(double *y1, double *y2, double *t, int N, int *winSizes, int nWins
     dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
     if(revSeg)
     {
-        DCCAKernelBackwards<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(y1, y1, t, N, d_winSizes, nWins, d_Fxx);
-        DCCAKernelBackwards<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(y2, y2, t, N, d_winSizes, nWins, d_Fyy);
+        DCCAabsKernelBackwards<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(y1, y1, t, N, d_winSizes, nWins, d_Fxx);
+        DCCAabsKernelBackwards<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(y2, y2, t, N, d_winSizes, nWins, d_Fyy);
         DCCAKernelBackwards<<<blocksPerGrid, threadsPerBlock, 0, stream_3>>>(y1, y2, t, N, d_winSizes, nWins, d_Fxy);
     }
     else
     {
-        DCCAKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(y1, y1, t, N, d_winSizes, nWins, d_Fxx);
-        DCCAKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(y2, y2, t, N, d_winSizes, nWins, d_Fyy);
+        DCCAabsKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(y1, y1, t, N, d_winSizes, nWins, d_Fxx);
+        DCCAabsKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(y2, y2, t, N, d_winSizes, nWins, d_Fyy);
         DCCAKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_3>>>(y1, y2, t, N, d_winSizes, nWins, d_Fxy);
     }
 

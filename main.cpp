@@ -5,11 +5,12 @@
 #include "c++/dfa.h"
 #include "c++/mfdfa.h"
 #include "c++/ht.h"
+#include "c++/dcca.h"
 #include "c++/utils.h"
 
 #include "cudaProfiler.h"
 
-#define HT_MAIN
+#define DCCA_MAIN
 
 int main(int argc, char **argv)
 {
@@ -19,6 +20,8 @@ int main(int argc, char **argv)
     int N = atoi(argv[1]);
     double *in = new double [N];
     double *in_cs = new double [N];
+    double *in_2 = new double [N];
+    double *in_cs_2 = new double [N];
 
     std::random_device rd;
     std::mt19937 gen(42);  //gen(rd());
@@ -28,6 +31,11 @@ int main(int argc, char **argv)
     in_cs[0] = in[0];
     for(int i = 1; i < N; i++)
         in_cs[i] = in_cs[i - 1] + in[i];
+    for(int i = 0; i < N; i++)
+        in_2[i] = gdist(gen);
+    in_cs_2[0] = in_2[0];
+    for(int i = 1; i < N; i++)
+        in_cs_2[i] = in_cs_2[i - 1] + in_2[i];
 
     /*char file_name[64];
     sprintf(file_name, "test_file_2.txt");
@@ -35,7 +43,7 @@ int main(int argc, char **argv)
     fprintf(out_file, "in,in_cs\n");
     for(int i = 0; i < N; i++)
     {
-	fprintf(out_file, "%.6f,%.6f\n", in[i], in_cs[i]);
+	fprintf(out_file, "%.6f,%.6f\n", in_2[i], in_cs_2[i]);
     }
     fclose(out_file);*/
 
@@ -192,8 +200,59 @@ int main(int argc, char **argv)
     delete [] fVec;
 #endif
 
+#ifdef DCCA_MAIN
+    int minWin = 10;
+    int nWins = N / 4 - minWin;
+    int *wins = new int [nWins];
+    double *rho = new double [nWins];
+
+    for(int i = 0; i < nWins; i++)
+    {
+        wins[i] = i + minWin;
+    }
+
+    fprintf(stderr, "Input vector length: %d\n", N);
+    fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
+
+    int th = atoi(argv[2]);
+
+    DCCA dcca(in_cs, in_cs_2, N);
+
+    cudaEvent_t start_o, stop_o, start_i, stop_i;
+    float elapsedTime_o, elapsedTime_i;
+
+    cudaEventCreate(&start_o);
+    cudaEventRecord(start_o, 0);
+
+    dcca.computeFlucVec(wins, nWins, rho, th);
+
+    cudaEventCreate(&stop_o);
+    cudaEventRecord(stop_o, 0);
+    cudaEventSynchronize(stop_o);
+
+    cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
+    fprintf(stderr, "DCCA FW -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
+
+    cudaEventCreate(&start_i);
+    cudaEventRecord(start_i, 0);
+
+    dcca.computeFlucVec(wins, nWins, rho, th, true);
+
+    cudaEventCreate(&stop_i);
+    cudaEventRecord(stop_i, 0);
+    cudaEventSynchronize(stop_i);
+
+    cudaEventElapsedTime(&elapsedTime_i, start_i, stop_i);
+    fprintf(stderr, "DCCA BW -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_i);
+
+    delete [] wins;
+    delete [] rho;
+#endif
+
     delete [] in;
     delete [] in_cs;
+    delete [] in_2;
+    delete [] in_cs_2;
 
     return 0;
 }
