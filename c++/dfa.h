@@ -9,13 +9,13 @@
 class DFA
 {
 public:
-    explicit DFA(double *h_y, int yLen);
+    explicit DFA(float *h_y, int yLen);
     ~DFA();
-    void computeFlucVec(int *winSizes, int nWins, double *F, double I, double H, int threads, bool revSeg=false);
+    void computeFlucVec(int *winSizes, int nWins, float *F, float I, float H, int threads, bool revSeg=false);
 private:
     cudaError_t cudaErr;
-    double *d_y;
-    double *d_t;
+    float *d_y;
+    float *d_t;
     int len = 0;
 };
 

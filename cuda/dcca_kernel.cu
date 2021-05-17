@@ -1,10 +1,11 @@
 #include "dcca_kernel.cuh"
+#include <iostream>
 
 
 __global__
-void DCCAKernel(const double * __restrict__ y1, const double * __restrict__ y2,
-                const double * __restrict__ t, int N,
-                const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
+void DCCAKernel(const float * __restrict__ y1, const float * __restrict__ y2,
+                const float * __restrict__ t, int N,
+                const int * __restrict__ winSizes, int nWins, float * __restrict__ flucVec)
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -12,21 +13,21 @@ void DCCAKernel(const double * __restrict__ y1, const double * __restrict__ y2,
     {
         int currWinSize = winSizes[nWin];
         int Ns = N / currWinSize;
-        double f = 0.0;
+        float f = 0.0;
         
         for(int i = 0; i < Ns; i++)
         {
             int startLim = i * currWinSize;
-            double m1 = 0.0, q1 = 0.0;
-            double m2 = 0.0, q2 = 0.0;
+            float m1 = 0.0, q1 = 0.0;
+            float m2 = 0.0, q2 = 0.0;
 
             fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
             fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
 
             for(int j = 0; j < currWinSize; j++)
             {
-                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
-                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                float var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                float var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
                 f += var1 * var2;
             }
         }
@@ -36,9 +37,9 @@ void DCCAKernel(const double * __restrict__ y1, const double * __restrict__ y2,
 }
 
 __global__
-void DCCAabsKernel(const double * __restrict__ y1, const double * __restrict__ y2,
-                const double * __restrict__ t, int N,
-                const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
+void DCCAabsKernel(const float * __restrict__ y1, const float * __restrict__ y2,
+                const float * __restrict__ t, int N,
+                const int * __restrict__ winSizes, int nWins, float * __restrict__ flucVec)
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -46,21 +47,21 @@ void DCCAabsKernel(const double * __restrict__ y1, const double * __restrict__ y
     {
         int currWinSize = winSizes[nWin];
         int Ns = N / currWinSize;
-        double f = 0.0;
+        float f = 0.0;
 
         for(int i = 0; i < Ns; i++)
         {
             int startLim = i * currWinSize;
-            double m1 = 0.0, q1 = 0.0;
-            double m2 = 0.0, q2 = 0.0;
+            float m1 = 0.0, q1 = 0.0;
+            float m2 = 0.0, q2 = 0.0;
 
             fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
             fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
 
             for(int j = 0; j < currWinSize; j++)
             {
-                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
-                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                float var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                float var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
                 f += fabs(var1 * var2);
             }
         }
@@ -70,9 +71,9 @@ void DCCAabsKernel(const double * __restrict__ y1, const double * __restrict__ y
 }
 
 __global__
-void DCCAKernelBackwards(const double * __restrict__ y1, const double * __restrict__ y2,
-                         const double * __restrict__ t, int N,
-                         const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
+void DCCAKernelBackwards(const float * __restrict__ y1, const float * __restrict__ y2,
+                         const float * __restrict__ t, int N,
+                         const int * __restrict__ winSizes, int nWins, float * __restrict__ flucVec)
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -80,21 +81,21 @@ void DCCAKernelBackwards(const double * __restrict__ y1, const double * __restri
     {
         int currWinSize = winSizes[nWin];
         int Ns = N / currWinSize;
-        double f = 0.0;
+        float f = 0.0;
 
         for(int i = 0; i < Ns; i++)
         {
             int startLim = i * currWinSize;
-            double m1 = 0.0, q1 = 0.0;
-            double m2 = 0.0, q2 = 0.0;
+            float m1 = 0.0, q1 = 0.0;
+            float m2 = 0.0, q2 = 0.0;
 
             fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
             fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
 
             for(int j = 0; j < currWinSize; j++)
             {
-                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
-                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                float var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                float var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
                 f += var1 * var2;
             }
 
@@ -104,20 +105,20 @@ void DCCAKernelBackwards(const double * __restrict__ y1, const double * __restri
 
             for(int j = 0; j < currWinSize; j++)
             {
-                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
-                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                float var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                float var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
                 f += var1 * var2;
             }
         }
 
-        flucVec[nWin] = f / (2.0 * Ns * currWinSize);
+        flucVec[nWin] = f / (2.0f * Ns * currWinSize);
     }
 }
 
 __global__
-void DCCAabsKernelBackwards(const double * __restrict__ y1, const double * __restrict__ y2,
-                         const double * __restrict__ t, int N,
-                         const int * __restrict__ winSizes, int nWins, double * __restrict__ flucVec)
+void DCCAabsKernelBackwards(const float * __restrict__ y1, const float * __restrict__ y2,
+                         const float * __restrict__ t, int N,
+                         const int * __restrict__ winSizes, int nWins, float * __restrict__ flucVec)
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -125,21 +126,21 @@ void DCCAabsKernelBackwards(const double * __restrict__ y1, const double * __res
     {
         int currWinSize = winSizes[nWin];
         int Ns = N / currWinSize;
-        double f = 0.0;
+        float f = 0.0;
 
         for(int i = 0; i < Ns; i++)
         {
             int startLim = i * currWinSize;
-            double m1 = 0.0, q1 = 0.0;
-            double m2 = 0.0, q2 = 0.0;
+            float m1 = 0.0, q1 = 0.0;
+            float m2 = 0.0, q2 = 0.0;
 
             fit(currWinSize, t + startLim, y1 + startLim, &m1, &q1);
             fit(currWinSize, t + startLim, y2 + startLim, &m2, &q2);
 
             for(int j = 0; j < currWinSize; j++)
             {
-                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
-                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                float var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                float var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
                 f += fabs(var1 * var2);
             }
 
@@ -149,19 +150,19 @@ void DCCAabsKernelBackwards(const double * __restrict__ y1, const double * __res
 
             for(int j = 0; j < currWinSize; j++)
             {
-                double var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
-                double var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
+                float var1 = y1[startLim + j] - (q1 + m1 * t[startLim + j]);
+                float var2 = y2[startLim + j] - (q2 + m2 * t[startLim + j]);
                 f += fabs(var1 * var2);
             }
         }
 
-        flucVec[nWin] = sqrt(f / (2.0 * Ns * currWinSize));
+        flucVec[nWin] = sqrt(f / (2.0f * Ns * currWinSize));
     }
 }
 
 __global__
-void rhoKernel(const double * __restrict__ fxx, const double * __restrict__ fyy,
-               const double * __restrict__ fxy, int n, double * __restrict__ p)
+void rhoKernel(const float * __restrict__ fxx, const float * __restrict__ fyy,
+               const float * __restrict__ fxy, int n, float * __restrict__ p)
 {
     int nWin = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -171,23 +172,23 @@ void rhoKernel(const double * __restrict__ fxx, const double * __restrict__ fyy,
     }
 }
 
-void cudaDCCA(double *y1, double *y2, double *t, int N, int *winSizes, int nWins, bool revSeg, double *rho, int nThreads)
+void cudaDCCA(float *y1, float *y2, float *t, int N, int *winSizes, int nWins, bool revSeg, float *rho, int nThreads)
 {
     // device variables
-    double *d_Fxx;
-    cudaMalloc(&d_Fxx, nWins * sizeof(double));
+    float *d_Fxx;
+    cudaMalloc(&d_Fxx, nWins * sizeof(float));
 
-    double *d_Fyy;
-    cudaMalloc(&d_Fyy, nWins * sizeof(double));
+    float *d_Fyy;
+    cudaMalloc(&d_Fyy, nWins * sizeof(float));
 
-    double *d_Fxy;
-    cudaMalloc(&d_Fxy, nWins * sizeof(double));
+    float *d_Fxy;
+    cudaMalloc(&d_Fxy, nWins * sizeof(float));
 
     int *d_winSizes;
     cudaMalloc(&d_winSizes, nWins * sizeof(int));
 
-    double *d_rho;
-    cudaMalloc(&d_rho, nWins * sizeof(double));
+    float *d_rho;
+    cudaMalloc(&d_rho, nWins * sizeof(float));
 
     // copy to device
     cudaMemcpy(d_winSizes, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
@@ -221,13 +222,84 @@ void cudaDCCA(double *y1, double *y2, double *t, int N, int *winSizes, int nWins
     rhoKernel<<<blocksPerGrid, threadsPerBlock>>>(d_Fxx, d_Fyy, d_Fxy, nWins, d_rho);
 
     // copy to host
-    cudaMemcpy(rho, d_rho, nWins * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(rho, d_rho, nWins * sizeof(float), cudaMemcpyDeviceToHost);
 
     // free memory
     cudaFree(d_Fxx);
     cudaFree(d_Fyy);
     cudaFree(d_Fxy);
     cudaFree(d_winSizes);
+    cudaFree(d_rho);
+}
+
+void cudaDCCAConfInt(int *winSizes, int nWins, int N, int nSim, float confLevel, int nThreads)
+{
+    // random numbers generator
+    curandGenerator_t gen;
+    curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
+    curandSetPseudoRandomGeneratorSeed(gen, 1234ULL);
+
+    // device variables
+    float *d_t;
+    cudaMalloc(&d_t, N * sizeof(float));
+    linRange(d_t, N, 1);
+    float *d_rand;
+    cudaMalloc(&d_rand, 2 * N * sizeof(float));
+
+    int *d_winSizes;
+    cudaMalloc(&d_winSizes, nWins * sizeof(int));
+    cudaMemcpy(d_winSizes, winSizes, nWins * sizeof(int), cudaMemcpyHostToDevice);
+
+    float *d_fxx, *d_fyy, *d_fxy;
+    cudaMalloc(&d_fxx, nWins * sizeof(float));
+    cudaMalloc(&d_fyy, nWins * sizeof(float));
+    cudaMalloc(&d_fxy, nWins * sizeof(float));
+
+    float *d_rho;
+    cudaMalloc(&d_rho, nWins * nSim * sizeof(float));
+
+    cudaStream_t stream_1, stream_2, stream_3;
+    cudaStreamCreate(&stream_1);
+    cudaStreamCreate(&stream_2);
+    cudaStreamCreate(&stream_3);
+
+    dim3 threadsPerBlock(nThreads);
+    dim3 blocksPerGrid((nWins + nThreads - 1) / nThreads);
+
+    for(int i = 0; i < nSim; i++)
+    {
+        // generate random sequences
+        curandGenerateNormal(gen, d_rand, 2 * N, 0.0f, 1.0f);
+
+        DCCAabsKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_1>>>(d_rand, d_rand, d_t, N, d_winSizes, nWins, d_fxx);
+        DCCAabsKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(&d_rand[N], &d_rand[N], d_t, N, d_winSizes, nWins, d_fyy);
+        DCCAKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_3>>>(d_rand, &d_rand[N], d_t, N, d_winSizes, nWins, d_fxy);
+
+        cudaDeviceSynchronize();
+
+        rhoKernel<<<blocksPerGrid, threadsPerBlock>>>(d_fxx, d_fyy, d_fxy, nWins, &d_rho[i * nWins]);
+    }
+
+    cudaStreamDestroy(stream_1);
+    cudaStreamDestroy(stream_2);
+    cudaStreamDestroy(stream_3);
+
+    float *rho = new float [nWins * nSim];
+    cudaMemcpy(rho, d_rho, nWins * nSim * sizeof(float), cudaMemcpyDeviceToHost);
+    for(int i = 0; i < nSim; i++)
+    {
+        fprintf(stderr, "sim %d: %f\n", i, rho[i * nWins]);
+    }
+    delete [] rho;
+
+    // free memory
+    curandDestroyGenerator(gen);
+    cudaFree(d_t);
+    cudaFree(d_rand);
+    cudaFree(d_winSizes);
+    cudaFree(d_fxx);
+    cudaFree(d_fyy);
+    cudaFree(d_fxy);
     cudaFree(d_rho);
 }
 

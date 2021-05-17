@@ -3,10 +3,12 @@
 
 #include "cuda_runtime.h"
 #include "cuda.h"
+#include "curand.h"
 #include "utils_device.cuh"
 #include "utils_kernels.cuh"
 
 
-void cudaDCCA(double *y1, double *y2, double *t, int N, int *winSizes, int nWins, bool revSeg, double *rho, int nThreads);
+void cudaDCCA(float *y1, float *y2, float *t, int N, int *winSizes, int nWins, bool revSeg, float *rho, int nThreads);
+void cudaDCCAConfInt(int *winSizes, int nWins, int N, int nSim, float confLevel, int nThreads);
 
 #endif

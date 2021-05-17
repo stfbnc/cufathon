@@ -7,14 +7,14 @@
 
 
 __device__ inline
-void fit(int L, const double * __restrict__ x, const double * __restrict__ y,
-         double *ang_coeff, double *intercept)
+void fit(int L, const float * __restrict__ x, const float * __restrict__ y,
+         float *ang_coeff, float *intercept)
 {
-    double sumx = 0.0;
-    double sumx2 = 0.0;
-    double sumxy = 0.0;
-    double sumy = 0.0;
-    double sumy2 = 0.0;
+    float sumx = 0.0;
+    float sumx2 = 0.0;
+    float sumxy = 0.0;
+    float sumy = 0.0;
+    float sumy2 = 0.0;
 
     for(int i = 0; i < L; i++)
     {
@@ -25,7 +25,7 @@ void fit(int L, const double * __restrict__ x, const double * __restrict__ y,
         sumy2 += y[i] * y[i];
     }
 
-    double denom = (L * sumx2 - sumx * sumx);
+    float denom = (L * sumx2 - sumx * sumx);
 
     if(denom == 0.0)
     {
@@ -34,12 +34,12 @@ void fit(int L, const double * __restrict__ x, const double * __restrict__ y,
         return;
     }
 
-    *ang_coeff = (L * sumxy - sumx * sumy) / (double)denom;
-    *intercept = (sumy * sumx2 - sumx * sumxy) / (double)denom;
+    *ang_coeff = (L * sumxy - sumx * sumy) / (float)denom;
+    *intercept = (sumy * sumx2 - sumx * sumxy) / (float)denom;
 }
 
 __global__
-void hFit(int L, const double * __restrict__ x, const double * __restrict__ y,
-              double *ang_coeff, double *intercept);
+void hFit(int L, const float * __restrict__ x, const float * __restrict__ y,
+          float *ang_coeff, float *intercept);
 
 #endif

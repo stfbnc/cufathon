@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-MFDFA::MFDFA(double *h_y, int yLen)
+MFDFA::MFDFA(float *h_y, int yLen)
 {
     // reset internal state
     cudaErr = cudaGetLastError();
@@ -10,16 +10,16 @@ MFDFA::MFDFA(double *h_y, int yLen)
     // assign local variables and reserve memory on device
     len = yLen;
   
-    cudaErr = cudaMalloc(&d_y, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_y, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMalloc(&d_t, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_t, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
     // fill device arrays
-    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(double), cudaMemcpyHostToDevice);
+    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(float), cudaMemcpyHostToDevice);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
@@ -40,7 +40,7 @@ MFDFA::~MFDFA()
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
-void MFDFA::computeFlucVec(int *winSizes, int nWins, double *qVals, int nq, double *hq, int threads, bool revSeg)
+void MFDFA::computeFlucVec(int *winSizes, int nWins, float *qVals, int nq, float *hq, int threads, bool revSeg)
 {
     cudaMFDFA(d_y, d_t, len, winSizes, nWins, qVals, nq, revSeg, hq, threads);
     cudaErr = cudaGetLastError();
@@ -52,7 +52,7 @@ void MFDFA::computeFlucVec(int *winSizes, int nWins, double *qVals, int nq, doub
     fprintf(stderr, "hq[%d]: %lf\n", nq - 1, hq[nq - 1]);
 }
 
-void MFDFA::computeMultifractalSpectrum(int *winSizes, int nWins, double *qVals, int nq, double *a, double *fa, int threads, bool revSeg)
+void MFDFA::computeMultifractalSpectrum(int *winSizes, int nWins, float *qVals, int nq, float *a, float *fa, int threads, bool revSeg)
 {
     cudaMultifractalSpectrum(d_y, d_t, len, winSizes, nWins, qVals, nq, revSeg, a, fa, threads);
     cudaErr = cudaGetLastError();

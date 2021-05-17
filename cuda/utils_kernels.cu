@@ -3,7 +3,7 @@
 
 
 __global__
-void linRangeKernel(double * __restrict__ vec, int N, int start)
+void linRangeKernel(float * __restrict__ vec, int N, int start)
 {
     int tx = blockIdx.x * blockDim.x + threadIdx.x;
     
@@ -13,7 +13,7 @@ void linRangeKernel(double * __restrict__ vec, int N, int start)
     }
 }
 
-void linRange(double *vec, int N, int start)
+void linRange(float *vec, int N, int start)
 {
     int nThreads = 512;
     dim3 threadsPerBlock(nThreads);
@@ -23,7 +23,7 @@ void linRange(double *vec, int N, int start)
 }
 
 __global__
-void doubleToLog(const double * __restrict__ vec, double * __restrict__ logVec, int N)
+void floatToLog(const float * __restrict__ vec, float * __restrict__ logVec, int N)
 {
     int tx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -34,13 +34,13 @@ void doubleToLog(const double * __restrict__ vec, double * __restrict__ logVec, 
 }
 
 __global__
-void intToLog(const int * __restrict__ vec, double * __restrict__ logVec, int N)
+void intToLog(const int * __restrict__ vec, float * __restrict__ logVec, int N)
 {
     int tx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if(tx < N)
     {
-        logVec[tx] = log(1.0 * vec[tx]);
+        logVec[tx] = log(1.0f * vec[tx]);
     }
 }
 

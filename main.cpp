@@ -10,7 +10,7 @@
 
 #include "cudaProfiler.h"
 
-#define DCCA_MAIN
+#define THRESHOLDS
 
 int main(int argc, char **argv)
 {
@@ -18,10 +18,10 @@ int main(int argc, char **argv)
     gpuUtils::getGpuInfo(gpu);
 
     int N = atoi(argv[1]);
-    double *in = new double [N];
-    double *in_cs = new double [N];
-    double *in_2 = new double [N];
-    double *in_cs_2 = new double [N];
+    float *in = new float [N];
+    float *in_cs = new float [N];
+    float *in_2 = new float [N];
+    float *in_cs_2 = new float [N];
 
     std::random_device rd;
     std::mt19937 gen(42);  //gen(rd());
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     int minWin = 10;
     int nWins = N / 4 - minWin;
     int *wins = new int [nWins];
-    double *fVec = new double [nWins];
+    float *fVec = new float [nWins];
     
     for(int i = 0; i < nWins; i++)
     {
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    double I = 0.0, H = 0.0;
+    float I = 0.0, H = 0.0;
     dfa.computeFlucVec(wins, nWins, fVec, I, H, th);
 
     cudaEventCreate(&stop_o);
@@ -103,10 +103,10 @@ int main(int argc, char **argv)
     int nWins = N / 4 - minWin;
     int nq = 10;
     int *wins = new int [nWins];
-    double *qs = new double [nq];
-    double *hq = new double [nq];
-    double *a = new double [nq - 1];
-    double *fa = new double [nq - 1];
+    float *qs = new float [nq];
+    float *hq = new float [nq];
+    float *a = new float [nq - 1];
+    float *fa = new float [nq - 1];
 
     for(int i = 0; i < nWins; i++)
     {
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
     }
     
     int hfLen = nScales * (N + 1) - sLen;
-    double *fVec = new double [hfLen];
+    float *fVec = new float [hfLen];
     /*for(int i = 0; i < hfLen; i++)
     {
         fVec[i] = 0.0;
@@ -204,7 +204,7 @@ int main(int argc, char **argv)
     int minWin = 10;
     int nWins = N / 4 - minWin;
     int *wins = new int [nWins];
-    double *rho = new double [nWins];
+    float *rho = new float [nWins];
 
     for(int i = 0; i < nWins; i++)
     {
@@ -247,6 +247,41 @@ int main(int argc, char **argv)
 
     delete [] wins;
     delete [] rho;
+#endif
+
+#ifdef THRESHOLDS
+    int minWin = 10;
+    int nWins = N / 4 - minWin;
+    int *wins = new int [nWins];
+
+    for(int i = 0; i < nWins; i++)
+    {
+        wins[i] = i + minWin;
+    }
+
+    fprintf(stderr, "Input vector length: %d\n", N);
+    fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
+
+    int th = atoi(argv[2]);
+
+    DCCA dcca(in_cs, in_cs_2, N);
+
+    cudaEvent_t start_o, stop_o;
+    float elapsedTime_o;
+
+    cudaEventCreate(&start_o);
+    cudaEventRecord(start_o, 0);
+
+    dcca.computeThresholds(wins, nWins, th);
+
+    cudaEventCreate(&stop_o);
+    cudaEventRecord(stop_o, 0);
+    cudaEventSynchronize(stop_o);
+
+    cudaEventElapsedTime(&elapsedTime_o, start_o, stop_o);
+    fprintf(stderr, "THRESHOLDS -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
+
+    delete [] wins;
 #endif
 
     delete [] in;

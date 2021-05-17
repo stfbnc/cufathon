@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-DCCA::DCCA(double *h_y1, double *h_y2, int yLen)
+DCCA::DCCA(float *h_y1, float *h_y2, int yLen)
 {
     // reset internal state
     cudaErr = cudaGetLastError();
@@ -10,24 +10,24 @@ DCCA::DCCA(double *h_y1, double *h_y2, int yLen)
     // assign local variables and reserve memory on device
     len = yLen;
   
-    cudaErr = cudaMalloc(&d_y1, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_y1, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMalloc(&d_y2, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_y2, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMalloc(&d_t, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_t, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
     // fill device arrays
-    cudaErr = cudaMemcpy(d_y1, h_y1, len * sizeof(double), cudaMemcpyHostToDevice);
+    cudaErr = cudaMemcpy(d_y1, h_y1, len * sizeof(float), cudaMemcpyHostToDevice);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMemcpy(d_y2, h_y2, len * sizeof(double), cudaMemcpyHostToDevice);
+    cudaErr = cudaMemcpy(d_y2, h_y2, len * sizeof(float), cudaMemcpyHostToDevice);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
@@ -52,7 +52,7 @@ DCCA::~DCCA()
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
-void DCCA::computeFlucVec(int *winSizes, int nWins, double *rho, int threads, bool revSeg)
+void DCCA::computeFlucVec(int *winSizes, int nWins, float *rho, int threads, bool revSeg)
 {
     cudaDCCA(d_y1, d_y2, d_t, len, winSizes, nWins, revSeg, rho, threads);
     cudaErr = cudaGetLastError();
@@ -62,5 +62,13 @@ void DCCA::computeFlucVec(int *winSizes, int nWins, double *rho, int threads, bo
     fprintf(stderr, "p[0]: %lf\n", rho[0]);
     fprintf(stderr, "p[%d]: %lf\n", nWins / 2, rho[nWins / 2]);
     fprintf(stderr, "p[%d]: %lf\n", nWins - 1, rho[nWins - 1]);
+}
+
+void DCCA::computeThresholds(int *winSizes, int nWins, int threads)
+{
+    cudaDCCAConfInt(winSizes, nWins, len, 3, 0.95f, threads);
+    cudaErr = cudaGetLastError();
+    if(cudaErr != cudaSuccess)
+        fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 

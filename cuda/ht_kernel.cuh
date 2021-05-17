@@ -7,6 +7,6 @@
 #include "utils_kernels.cuh"
 
 
-void cudaHT(double *y, double *t, int N, int *scales, int nScales, double *ht, int nThreads);
+void cudaHT(float *y, float *t, int N, int *scales, int nScales, float *ht, int nThreads);
 
 #endif

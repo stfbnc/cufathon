@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-HT::HT(double *h_y, int yLen)
+HT::HT(float *h_y, int yLen)
 {
     // reset internal state
     cudaErr = cudaGetLastError();
@@ -10,16 +10,16 @@ HT::HT(double *h_y, int yLen)
     // assign local variables and reserve memory on device
     len = yLen;
   
-    cudaErr = cudaMalloc(&d_y, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_y, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMalloc(&d_t, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_t, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
     // fill device arrays
-    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(double), cudaMemcpyHostToDevice);
+    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(float), cudaMemcpyHostToDevice);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
@@ -40,7 +40,7 @@ HT::~HT()
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
-void HT::computeFlucVec(int *scales, int nScales, double *ht, int threads)
+void HT::computeFlucVec(int *scales, int nScales, float *ht, int threads)
 {
     cudaHT(d_y, d_t, len, scales, nScales, ht, threads);
     cudaErr = cudaGetLastError();

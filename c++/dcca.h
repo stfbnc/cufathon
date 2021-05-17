@@ -9,14 +9,15 @@
 class DCCA
 {
 public:
-    explicit DCCA(double *h_y1, double *h_y2, int yLen);
+    explicit DCCA(float *h_y1, float *h_y2, int yLen);
     ~DCCA();
-    void computeFlucVec(int *winSizes, int nWins, double *rho, int threads, bool revSeg=false);
+    void computeFlucVec(int *winSizes, int nWins, float *rho, int threads, bool revSeg=false);
+    void computeThresholds(int *winSizes, int nWins, int threads);
 private:
     cudaError_t cudaErr;
-    double *d_y1;
-    double *d_y2;
-    double *d_t;
+    float *d_y1;
+    float *d_y2;
+    float *d_t;
     int len = 0;
 };
 

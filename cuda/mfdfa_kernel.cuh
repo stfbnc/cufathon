@@ -7,7 +7,7 @@
 #include "utils_kernels.cuh"
 
 
-void cudaMFDFA(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, bool revSeg, double *hq, int nThreads);
-void cudaMultifractalSpectrum(double *y, double *t, int N, int *winSizes, int nWins, double *qVals, int nq, bool revSeg, double *a, double *fa, int nThreads);
+void cudaMFDFA(float *y, float *t, int N, int *winSizes, int nWins, float *qVals, int nq, bool revSeg, float *hq, int nThreads);
+void cudaMultifractalSpectrum(float *y, float *t, int N, int *winSizes, int nWins, float *qVals, int nq, bool revSeg, float *a, float *fa, int nThreads);
 
 #endif

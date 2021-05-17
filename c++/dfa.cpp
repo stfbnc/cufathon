@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-DFA::DFA(double *h_y, int yLen)
+DFA::DFA(float *h_y, int yLen)
 {
     // reset internal state
     cudaErr = cudaGetLastError();
@@ -10,16 +10,16 @@ DFA::DFA(double *h_y, int yLen)
     // assign local variables and reserve memory on device
     len = yLen;
   
-    cudaErr = cudaMalloc(&d_y, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_y, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
-    cudaErr = cudaMalloc(&d_t, len * sizeof(double));
+    cudaErr = cudaMalloc(&d_t, len * sizeof(float));
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
     // fill device arrays
-    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(double), cudaMemcpyHostToDevice);
+    cudaErr = cudaMemcpy(d_y, h_y, len * sizeof(float), cudaMemcpyHostToDevice);
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 
@@ -40,7 +40,7 @@ DFA::~DFA()
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
 }
 
-void DFA::computeFlucVec(int *winSizes, int nWins, double *F, double I, double H, int threads, bool revSeg)
+void DFA::computeFlucVec(int *winSizes, int nWins, float *F, float I, float H, int threads, bool revSeg)
 {
     cudaDFA(d_y, d_t, len, winSizes, nWins, revSeg, F, &I, &H, threads);
     cudaErr = cudaGetLastError();

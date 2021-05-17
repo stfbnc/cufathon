@@ -26,7 +26,7 @@ CFLAGS_CPU=$(CFLAGS)
 CFLAGS_CPU+=-std=c++17
 
 COMMON+=-I/usr/local/cuda/include/
-LDFLAGS+=-L/usr/local/cuda/lib64 -lcuda -lcudart
+LDFLAGS+=-L/usr/local/cuda/lib64 -lcuda -lcudart -lcurand
 
 OBJ_MAIN=$(patsubst %.cpp,%.o,$(wildcard *.cpp))
 OBJ_CPU=$(patsubst %.cpp,%.o,$(wildcard c++/*.cpp))

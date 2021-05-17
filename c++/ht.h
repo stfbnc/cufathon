@@ -9,13 +9,13 @@
 class HT
 {
 public:
-    explicit HT(double *h_y, int yLen);
+    explicit HT(float *h_y, int yLen);
     ~HT();
-    void computeFlucVec(int *scales, int nScales, double *ht, int threads);
+    void computeFlucVec(int *scales, int nScales, float *ht, int threads);
 private:
     cudaError_t cudaErr;
-    double *d_y = nullptr;
-    double *d_t = nullptr;
+    float *d_y = nullptr;
+    float *d_t = nullptr;
     int len = 0;
 };
 

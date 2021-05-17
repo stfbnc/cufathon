@@ -7,6 +7,6 @@
 #include "utils_kernels.cuh"
 
 
-void cudaDFA(double *y, double *t, int N, int *winSizes, int nWins, bool revSeg, double *flucVec, double *I, double *H, int nThreads);
+void cudaDFA(float *y, float *t, int N, int *winSizes, int nWins, bool revSeg, float *flucVec, float *I, float *H, int nThreads);
 
 #endif
