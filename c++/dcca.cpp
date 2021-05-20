@@ -64,11 +64,15 @@ void DCCA::computeFlucVec(int *winSizes, int nWins, float *rho, int threads, boo
     fprintf(stderr, "p[%d]: %lf\n", nWins - 1, rho[nWins - 1]);
 }
 
-void DCCA::computeThresholds(int *winSizes, int nWins, int threads)
+void DCCA::computeThresholds(int *winSizes, int nWins, int nSim, float confLevel, float *confUp, float *confDown, int threads)
 {
-    cudaDCCAConfInt(winSizes, nWins, len, 3, 0.95f, threads);
+    cudaDCCAConfInt(winSizes, nWins, len, nSim, confLevel, confUp, confDown, threads);
     cudaErr = cudaGetLastError();
     if(cudaErr != cudaSuccess)
         fprintf(stderr, "%s\n", cudaGetErrorString(cudaErr));
+
+    fprintf(stderr, "up[0] : %f | down[0] : %f\n", confUp[0], confDown[0]);
+    fprintf(stderr, "up[%d] : %f | down[%d] : %f\n", nWins / 2, confUp[nWins / 2], nWins / 2, confDown[nWins / 2]);
+    fprintf(stderr, "up[%d] : %f | down[%d] : %f\n", nWins - 1, confUp[nWins - 1], nWins - 1, confDown[nWins - 1]);
 }
 

@@ -172,6 +172,18 @@ void rhoKernel(const float * __restrict__ fxx, const float * __restrict__ fyy,
     }
 }
 
+__host__
+int index_of_percentile(int N, float percentile)
+{
+    int i = static_cast<int>(round(N * percentile));
+    if(i == N)
+    {
+        i = N - 1;
+    }
+
+    return i;
+}
+
 void cudaDCCA(float *y1, float *y2, float *t, int N, int *winSizes, int nWins, bool revSeg, float *rho, int nThreads)
 {
     // device variables
@@ -232,7 +244,7 @@ void cudaDCCA(float *y1, float *y2, float *t, int N, int *winSizes, int nWins, b
     cudaFree(d_rho);
 }
 
-void cudaDCCAConfInt(int *winSizes, int nWins, int N, int nSim, float confLevel, int nThreads)
+void cudaDCCAConfInt(int *winSizes, int nWins, int N, int nSim, float confLevel, float *confUp, float *confDown, int nThreads)
 {
     // random numbers generator
     curandGenerator_t gen;
@@ -284,13 +296,21 @@ void cudaDCCAConfInt(int *winSizes, int nWins, int N, int nSim, float confLevel,
     cudaStreamDestroy(stream_2);
     cudaStreamDestroy(stream_3);
 
+    // copy to host
     float *rho = new float [nWins * nSim];
     cudaMemcpy(rho, d_rho, nWins * nSim * sizeof(float), cudaMemcpyDeviceToHost);
-    for(int i = 0; i < nSim; i++)
+
+    float *by_win = new float [nSim];
+    for(int i = 0; i < nWins; i++)
     {
-        fprintf(stderr, "sim %d: %f\n", i, rho[i * nWins]);
+        for(int j = 0; j < nSim; j++)
+        {
+            by_win[j] = rho[i + j * nWins];
+        }
+        std::sort(by_win, by_win + nSim);
+        confUp[i] = by_win[index_of_percentile(nSim, confLevel)];
+        confDown[i] = by_win[index_of_percentile(nSim, 1 - confLevel)];
     }
-    delete [] rho;
 
     // free memory
     curandDestroyGenerator(gen);
@@ -301,5 +321,8 @@ void cudaDCCAConfInt(int *winSizes, int nWins, int N, int nSim, float confLevel,
     cudaFree(d_fyy);
     cudaFree(d_fxy);
     cudaFree(d_rho);
+
+    delete [] rho;
+    delete [] by_win;
 }
 

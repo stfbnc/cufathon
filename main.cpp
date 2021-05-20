@@ -263,6 +263,10 @@ int main(int argc, char **argv)
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
     int th = atoi(argv[2]);
+    int nSim = atof(argv[3]);
+    float confLevel = 0.95f;
+    float *confUp = new float [nWins];
+    float *confDown = new float [nWins];
 
     DCCA dcca(in_cs, in_cs_2, N);
 
@@ -272,7 +276,7 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    dcca.computeThresholds(wins, nWins, th);
+    dcca.computeThresholds(wins, nWins, nSim, confLevel, confUp, confDown, th);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
@@ -282,6 +286,8 @@ int main(int argc, char **argv)
     fprintf(stderr, "THRESHOLDS -> GPU Time (threads = %d) : %f ms\n", th, elapsedTime_o);
 
     delete [] wins;
+    delete [] confUp;
+    delete [] confDown;
 #endif
 
     delete [] in;

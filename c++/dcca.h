@@ -12,7 +12,7 @@ public:
     explicit DCCA(float *h_y1, float *h_y2, int yLen);
     ~DCCA();
     void computeFlucVec(int *winSizes, int nWins, float *rho, int threads, bool revSeg=false);
-    void computeThresholds(int *winSizes, int nWins, int threads);
+    void computeThresholds(int *winSizes, int nWins, int nSim, float confLevel, float *confUp, float *confDown, int threads);
 private:
     cudaError_t cudaErr;
     float *d_y1;
