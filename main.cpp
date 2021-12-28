@@ -10,6 +10,7 @@
 
 #include "cudaProfiler.h"
 
+
 #define THRESHOLDS
 
 int main(int argc, char **argv)
