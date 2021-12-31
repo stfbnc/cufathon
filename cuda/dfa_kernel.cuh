@@ -1,12 +1,10 @@
-#ifndef DFA_KERNEL
-#define DFA_KERNEL
+#ifndef __DFA_KERNEL__
+#define __DFA_KERNEL__
 
 #include "cuda_runtime.h"
 #include "cuda.h"
 #include "utils_device.cuh"
-#include "utils_kernels.cuh"
 
-
-void cudaDFA(float *y, float *t, int N, int *winSizes, int nWins, bool revSeg, float *flucVec, float *I, float *H, int nThreads);
+void cudaDFA(float *y, int n, int *win_sizes, int n_wins, bool rev_seg, float *fluc_vec, int n_threads);
 
 #endif

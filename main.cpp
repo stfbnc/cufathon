@@ -2,23 +2,25 @@
 #include <iostream>
 #include <cstdlib>
 #include <random>
-#include "c++/dfa.h"
+/*#include "c++/dfa.h"
 #include "c++/mfdfa.h"
 #include "c++/ht.h"
 #include "c++/dcca.h"
-#include "c++/utils.h"
+#include "c++/utils.h"*/
+
+#include "cuda/dfa_kernel.cuh"
 
 #include "cudaProfiler.h"
 
 
-#define THRESHOLDS
+#define DFA_MAIN
 
 int main(int argc, char **argv)
 {
-    int gpu = 0;
-    gpuUtils::getGpuInfo(gpu);
+    int gpu = atoi(argv[1]);
+    //gpuUtils::getGpuInfo(gpu);
 
-    int N = atoi(argv[1]);
+    int N = atoi(argv[2]);
     float *in = new float [N];
     float *in_cs = new float [N];
     float *in_2 = new float [N];
@@ -62,9 +64,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
-    int th = atoi(argv[2]);
-    
-    DFA dfa(in_cs, N);
+    int th = atoi(argv[3]);
     
     cudaEvent_t start_o, stop_o, start_i, stop_i;
     float elapsedTime_o, elapsedTime_i;
@@ -72,8 +72,7 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_o);
     cudaEventRecord(start_o, 0);
 
-    float I = 0.0, H = 0.0;
-    dfa.computeFlucVec(wins, nWins, fVec, I, H, th);
+    cudaDFA(in_cs, N, wins, nWins, false, fVec, th);
 
     cudaEventCreate(&stop_o);
     cudaEventRecord(stop_o, 0);
@@ -85,7 +84,7 @@ int main(int argc, char **argv)
     cudaEventCreate(&start_i);
     cudaEventRecord(start_i, 0);
 
-    dfa.computeFlucVec(wins, nWins, fVec, I, H, th, true);
+    cudaDFA(in_cs, N, wins, nWins, true, fVec, th);
 
     cudaEventCreate(&stop_i);
     cudaEventRecord(stop_i, 0);
@@ -121,7 +120,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
-    int th = atoi(argv[2]);
+    int th = atoi(argv[3]);
     MFDFA mfdfa(in_cs, N);
 
     cudaEvent_t start_o, stop_o, start_i, stop_i;
@@ -180,7 +179,7 @@ int main(int argc, char **argv)
 
     fprintf(stderr, "Input vector length: %d\n", N);
 
-    int th = atoi(argv[2]);
+    int th = atoi(argv[3]);
     HT ht(in_cs, N);
 
     cudaEvent_t start_o, stop_o;
@@ -215,7 +214,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
-    int th = atoi(argv[2]);
+    int th = atoi(argv[3]);
 
     DCCA dcca(in_cs, in_cs_2, N);
 
@@ -263,8 +262,8 @@ int main(int argc, char **argv)
     fprintf(stderr, "Input vector length: %d\n", N);
     fprintf(stderr, "win[0] = %d | win[-1] = %d\n", wins[0], wins[nWins - 1]);
 
-    int th = atoi(argv[2]);
-    int nSim = atof(argv[3]);
+    int th = atoi(argv[3]);
+    int nSim = atof(argv[4]);
     float confLevel = 0.95f;
     float *confUp = new float [nWins];
     float *confDown = new float [nWins];
