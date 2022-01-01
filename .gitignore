@@ -1,0 +1,5 @@
+.vscode/
+old_cuda/
+cufathon
+*.o
+
