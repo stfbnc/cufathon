@@ -1,6 +1,6 @@
 # cufathon
 
-`fathon`, in CUDA.
+Some `fathon` algorithms (complete or partial), in CUDA.
 
 The code has been developed and tested on a Tesla V100-PCIE-16GB, compute capability 7.0.
 

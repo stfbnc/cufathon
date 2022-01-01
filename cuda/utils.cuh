@@ -14,15 +14,13 @@ void fit(int L, int x_start, const float * __restrict__ y,
     float sumx2 = 0.0f;
     float sumxy = 0.0f;
     float sumy = 0.0f;
-    float sumy2 = 0.0f;
 
     for(int i = 0; i < L; i++)
     {
         sumx += (x_start + i);
         sumx2 += (x_start + i) * (x_start + i);
-        sumxy += (x_start + i) * y[i]; 
+        sumxy += (x_start + i) * y[i];
         sumy += y[i];
-        sumy2 += y[i] * y[i];
     }
 
     float denom = (L * sumx2 - sumx * sumx);
@@ -39,14 +37,13 @@ void fit(int L, int x_start, const float * __restrict__ y,
 }
 
 __device__ inline
-void h_fit(int L, const int * __restrict__ x, const float * __restrict__ y,
+void h_fit(int L, const float * __restrict__ x, const float * __restrict__ y,
            float *ang_coeff, float *intercept)
 {
     float sumx = 0.0f;
     float sumx2 = 0.0f;
     float sumxy = 0.0f;
     float sumy = 0.0f;
-    float sumy2 = 0.0f;
 
     for(int i = 0; i < L; i++)
     {
@@ -54,7 +51,6 @@ void h_fit(int L, const int * __restrict__ x, const float * __restrict__ y,
         sumx2 += x[i] * x[i];
         sumxy += x[i] * y[i]; 
         sumy += y[i];
-        sumy2 += y[i] * y[i];
     }
 
     float denom = (L * sumx2 - sumx * sumx);

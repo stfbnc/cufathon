@@ -10,8 +10,6 @@
 #include "cuda/dcca_kernel.cuh"
 #include "cudaProfiler.h"
 
-#define HT_MAIN
-
 int main(int argc, char **argv)
 {
     int gpu = atoi(argv[1]);

@@ -44,6 +44,29 @@ void MFDFAforHTKernel(const float * __restrict__ y, int n,
 }
 
 __global__
+void H0Kernel(float * __restrict__ logw,
+              float * __restrict__ logf,
+              const int * __restrict__ win_sizes,
+              const float * __restrict__ fluc_vec,
+              int n, float *h0, float *h0_intercept)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(i < n)
+    {
+        logf[i] = log(fluc_vec[i]);
+        logw[i] = log(static_cast<float>(win_sizes[i]));
+    }
+
+    __syncthreads();
+
+    if(i == 0)
+    {
+        h_fit(n, logw, logf, h0, h0_intercept);
+    }
+}
+
+__global__
 void HTKernel(const float * __restrict__ y,
               int scale, int prev_scale, int n_s,
               float * __restrict__ fluc_vec)
@@ -72,12 +95,20 @@ void finalHTKernel(float * __restrict__ vecht, float n_s,
                    int scale, int prev_scale,
                    float *h0, float *h0_intercept)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int tx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if(i < n_s)
+    __shared__ float dscale;
+    dscale = static_cast<float>(scale);
+    __shared__ float h;
+    h = *h0;
+    __shared__ float i;
+    i = *h0_intercept;
+
+    __syncthreads();
+
+    if(tx < n_s)
     {
-        float dscale = static_cast<float>(scale);
-        vecht[prev_scale + i] = (*h0_intercept + *h0 * log(dscale) - log(vecht[prev_scale + i])) / (log(n_s) - log(dscale)) + *h0;
+        vecht[prev_scale + tx] = (i + h * log(dscale) - log(vecht[prev_scale + tx])) / (log(n_s) - log(dscale)) + h;
     }
 }
 
@@ -98,6 +129,7 @@ void cudaHT(float *y, int n, int *scales, int n_scales, float *ht, int n_threads
 
     float *d_y;
     cudaMalloc(&d_y, n * sizeof(float));
+    cudaMemcpy(d_y, y, n * sizeof(float), cudaMemcpyHostToDevice);
     float *d_ht;
     cudaMalloc(&d_ht, s_len * sizeof(float));
 
@@ -115,66 +147,65 @@ void cudaHT(float *y, int n, int *scales, int n_scales, float *ht, int n_threads
     cudaMalloc(&d_win_sizes, n_wins * sizeof(int));
     cudaMemcpy(d_win_sizes, win_sizes, n_wins * sizeof(int), cudaMemcpyHostToDevice);
 
-    float *fluc_vec_mfdfa;
-    cudaMalloc(&fluc_vec_mfdfa, n_wins * sizeof(float));
+    float *d_fluc_vec_mfdfa;
+    cudaMalloc(&d_fluc_vec_mfdfa, n_wins * sizeof(float));
+
+    float *d_log_w, *d_log_f, *d_h, *d_i;
+    cudaMalloc(&d_log_w, n_wins * sizeof(float));
+    cudaMalloc(&d_log_f, n_wins * sizeof(float));
+    cudaMalloc(&d_h, sizeof(float));
+    cudaMalloc(&d_i, sizeof(float));
 
     // kernel parameters
     dim3 threadsPerBlock_mfdfa(n_wins);
     dim3 blocksPerGrid_mfdfa(1);
     dim3 threadsPerBlock(n_threads);
 
-    cudaStream_t stream_1, stream_2;
-    cudaStreamCreate(&stream_1);
-    cudaStreamCreate(&stream_2);
+    int n_streams = 3;
+    cudaStream_t streams[n_streams];
+    for(int i = 0; i < n_streams; i++)
+    {
+        cudaStreamCreate(&streams[i]);
+    }
 
     // kernels
-    MFDFAforHTKernel<<<blocksPerGrid_mfdfa, threadsPerBlock_mfdfa, 0, stream_1>>>(y, n, d_win_sizes, n_wins, fluc_vec_mfdfa);
+    MFDFAforHTKernel<<<blocksPerGrid_mfdfa, threadsPerBlock_mfdfa, 0, streams[0]>>>(d_y, n, d_win_sizes, n_wins, d_fluc_vec_mfdfa);
+    H0Kernel<<<blocksPerGrid_mfdfa, threadsPerBlock_mfdfa, 0, streams[0]>>>(d_log_w, d_log_f, d_win_sizes, d_fluc_vec_mfdfa, n_wins, d_h, d_i);
     for(int i = 0; i < n_scales; i++)
     {
         int n_s = n - scales[i] + 1;
         dim3 blocksPerGrid((n_s + n_threads - 1) / n_threads);
-        HTKernel<<<blocksPerGrid, threadsPerBlock, 0, stream_2>>>(y, scales[i], prev_scales[i], n_s, d_ht);
-    }
+        HTKernel<<<blocksPerGrid, threadsPerBlock, 0, streams[1]>>>(d_y, scales[i], prev_scales[i], n_s, d_ht);
+    }    
 
-    // log variables for fit
-    /*float *d_logW_mfdfa, *d_logF_mfdfa;
-    cudaMalloc(&d_logW_mfdfa, nWins * sizeof(float));
-    cudaMalloc(&d_logF_mfdfa, nWins * sizeof(float));
-
-    floatToLog<<<blocksPerGrid_mfdfa, threadsPerBlock_mfdfa, 0, stream_1>>>(flucVec_mfdfa, d_logF_mfdfa, nWins);
-    intToLog<<<blocksPerGrid_mfdfa, threadsPerBlock_mfdfa, 0, stream_2>>>(d_winSizes, d_logW_mfdfa, nWins);
-
-    cudaStreamDestroy(stream_1);
-    cudaStreamDestroy(stream_2);*/
-
-    // mfdfa fit
-    /*float *d_H_mfdfa, *d_I_mfdfa;
-    cudaMalloc(&d_H_mfdfa, sizeof(float));
-    cudaMalloc(&d_I_mfdfa, sizeof(float));
-    hFit<<<1, 1>>>(nWins, d_logW_mfdfa, d_logF_mfdfa, d_H_mfdfa, d_I_mfdfa);
-    cudaDeviceSynchronize();*/
+    cudaDeviceSynchronize();
 
     // ht
-    /*for(int i = 0; i < nScales; i++)
+    for(int i = 0; i < n_scales; i++)
     {
-        float Ns = N - scales[i] + 1;
-        dim3 blocksPerGrid((Ns + nThreads - 1) / nThreads);
-        finalHTKernel<<<blocksPerGrid, threadsPerBlock>>>(d_ht, Ns, scales[i], prevScales[i], d_H_mfdfa, d_I_mfdfa);
-    }*/
+        float n_s = n - scales[i] + 1;
+        dim3 blocksPerGrid((n_s + n_threads - 1) / n_threads);
+        finalHTKernel<<<blocksPerGrid, threadsPerBlock, 0, streams[i % n_streams]>>>(d_ht, n_s, scales[i], prev_scales[i], d_h, d_i);
+    }
+
+    for(int i = 0; i < n_streams; i++)
+    {
+        cudaStreamDestroy(streams[i]);
+    }
 
     // copy to host
-    //cudaMemcpy(ht, d_ht, sLen * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ht, d_ht, s_len * sizeof(float), cudaMemcpyDeviceToHost);
 
     // free memory
     delete [] prev_scales;
 
     cudaFree(d_y);
     cudaFree(d_win_sizes);
-    cudaFree(fluc_vec_mfdfa);
-    //cudaFree(d_logW_mfdfa);
-    //cudaFree(d_logF_mfdfa);
-    //cudaFree(d_H_mfdfa);
-    //cudaFree(d_I_mfdfa);
+    cudaFree(d_fluc_vec_mfdfa);
+    cudaFree(d_log_w);
+    cudaFree(d_log_f);
+    cudaFree(d_h);
+    cudaFree(d_i);
     cudaFree(d_ht);
 }
 
