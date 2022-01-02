@@ -3,6 +3,6 @@
 
 #include "utils.cuh"
 
-void cudaMFDFA(float *y, int n, int *win_sizes, int n_wins, float *q_vals, int nq, bool rev_seg, float *fluc_vec, int n_threads);
+extern void cudaMFDFA(float *y, int n, int *win_sizes, int n_wins, float *q_vals, int nq, bool rev_seg, float *fluc_vec, int n_threads);
 
 #endif

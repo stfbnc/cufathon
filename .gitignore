@@ -2,4 +2,8 @@
 old_cuda/
 cufathon
 *.o
+cython/cuda_fathon.cpp
+build/
+cuda_fathon/cuda_fathon.*.so
+cuda_fathon/__pycache__/
 
